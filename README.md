@@ -1,0 +1,2 @@
+# searchbot
+Searchbot for ElasticSearch

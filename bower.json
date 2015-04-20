@@ -1,0 +1,24 @@
+{
+  "name": "searchbot",
+  "version": "0.1.0",
+  "authors": [
+    "Cox Chen <coxchen@gmail.com>"
+  ],
+  "description": "Searchbot",
+  "license": "Eclipse Public License",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "resources/public/bower_components/",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "~3.3.1"
+  },
+  "resolutions": {
+    "d3": "~3.4.1"
+  }
+}

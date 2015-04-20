@@ -1,11 +1,11 @@
 (defproject searchbot "0.1.0-SNAPSHOT"
-  :description "FIXME: write description"
+  :description "Searchbot for ES"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
   :source-paths ["src/clj"]
-:repl-options {:timeout 200000} ;; Defaults to 30000 (30 seconds)
+  :repl-options {:timeout 200000} ;; Defaults to 30000 (30 seconds)
 
   :test-paths ["spec/clj"]
 
@@ -18,7 +18,11 @@
                  [om "0.8.0-rc1"]
                  [environ "1.0.0"]
                  [http-kit "2.1.19"]
-                 [prismatic/om-tools "0.3.10"]]
+                 [prismatic/om-tools "0.3.10"]
+                 [sablono "0.2.22"]
+                 [cljs-http "0.1.21"]
+                 [org.clojure/core.async "0.1.346.0-17112a-alpha"]
+                 [clojurewerkz/elastisch "2.1.0"]]
 
   :plugins [[lein-cljsbuild "1.0.3"]
             [lein-environ "1.0.0"]]

@@ -16,7 +16,9 @@
     "tests"
   ],
   "dependencies": {
-    "bootstrap": "~3.3.1"
+    "bootstrap": "~3.3.1",
+    "d3": "~3.5.5",
+    "dimple": "~2.1.2"
   },
   "resolutions": {
     "d3": "~3.4.1"

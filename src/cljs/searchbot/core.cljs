@@ -7,18 +7,32 @@
             [cljs-http.client :as http]
             [goog.events :as events]
             [cljs.core.async :refer [put! <! >! chan timeout]]
-            [searchbot.widgets :refer [header agg-summary agg-table]]))
+            [searchbot.widgets :refer [header agg-summary agg-table chart]]))
 
 (defonce app-state (atom {:header-text "AVC realtime aggregation"
                           :avc-count 0
-                          :agg {}}))
+                          :agg {}
+                          :chart {:div {:width "90%" :height 300}
+                                  :data [{:value 240000 :timestamp "2014-01-01"}
+                                         {:value 260000 :timestamp "2014-02-01"}
+                                         {:value 290000 :timestamp "2014-03-01"}
+                                         {:value 70000  :timestamp "2014-04-01"}
+                                         {:value 100000 :timestamp "2014-05-01"}
+                                         {:value 120000 :timestamp "2014-06-01"}
+                                         {:value 240000 :timestamp "2014-07-01"}
+                                         {:value 220000 :timestamp "2014-08-01"}
+                                         {:value 360000 :timestamp "2014-09-01"}
+                                         {:value 260000 :timestamp "2014-10-01"}
+                                         {:value 250000 :timestamp "2014-11-01"}
+                                         {:value 190000 :timestamp "2014-12-01"}]}
+                          }))
 
 (defcomponent my-app [app owner]
   (render [this] (html [:div
                         (om/build header app)
                         [:.row [:.col-lg-4 (om/build agg-summary app)]]
                         [:.row
-                         [:.col-lg-4
+                         [:.col-lg-3
                           (om/build agg-table app
                                     {:opts {:agg-key "SSID AGG"
                                             :agg-top "ssids"
@@ -47,8 +61,35 @@
                                                                   :sum_down {:sum {:field "down"}}}}}}}})]
 
                          ]
+                        [:.row
+                         [:.col-lg-3
+                          (om/build chart (:chart app)
+                                    {:opts {:id "bar"
+                                            :draw-fn :draw-bar
+                                            :chart {:bounds {:x "5%" :y "15%" :width "80%" :height "80%"}
+                                                    :plot js/dimple.plot.bar
+                                                    :x-axis "timestamp"
+                                                    :y-axis "value"}}})
+                          ]
+                         [:.col-lg-3
+                          (om/build chart (:chart app)
+                                    {:opts {:id "pie"
+                                            :chart {:bounds {:x "5%" :y "15%" :width "80%" :height "80%"}
+                                                    :plot js/dimple.plot.pie
+                                                    :p-axis "value"
+                                                    :c-axis "timestamp"}
+                                            :draw-fn :draw-ring}})]
+                         [:.col-lg-3
+                          (om/build chart (:chart app)
+                                    {:opts {:id "line"
+                                            :draw-fn :draw-bar
+                                            :chart {:bounds {:x "10%" :y "5%" :width "80%" :height "70%"}
+                                                    :plot js/dimple.plot.line
+                                                    :x-axis "timestamp"
+                                                    :y-axis "value"}}})
+                          ]
+                         ]
                         ])))
-
 
 
 (defn main []

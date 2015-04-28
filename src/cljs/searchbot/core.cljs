@@ -12,98 +12,108 @@
 (defonce app-state (atom {:header-text "AVC realtime aggregation"
                           :avc-count 0
                           :agg {:div {:width "90%" :height 300}}
+                          :aggregators [{:agg-key "SSID AGG"
+                                         :body {:aggs {:ssids
+                                                       {:terms {:field "ssid" :order {:sum_usage "desc"}}
+                                                        :aggs {:sum_usage {:sum {:field "usage"}}
+                                                               :client_count
+                                                               {:cardinality {:field "client_mac.hash"
+                                                                              :precision_threshold 50000}}}}}}}
+                                        {:agg-key "APP AGG"
+                                         :body {:aggs {:apps
+                                                       {:terms {:field "app" :order {:sum_usage "desc"}}
+                                                        :aggs {:sum_usage {:sum {:field "usage"}}
+                                                               :sum_up {:sum {:field "up"}}
+                                                               :sum_down {:sum {:field "down"}}}}}}}
+                                        {:agg-key "TIME AGG"
+                                         :body {:aggs {:traffic_over_time
+                                                       {:date_histogram
+                                                        {:field "timestamp" :interval "1h"
+                                                         :format "MM-dd kk:mm" :post_zone "+08:00"}
+                                                        :aggs {:sum_up {:sum {:field "up"}}
+                                                               :sum_down {:sum {:field "down"}}}}}}}
+                                        ]
+                          :widgets [[{:type :es-chart :cursor :agg
+                                      :id "ssid_pie" :agg-key "SSID AGG" :agg-top "ssids"
+                                      :agg-view [:key :sum_usage]
+                                      :draw-fn :draw-ring
+                                      :chart {:bounds {:x "5%" :y "15%" :width "80%" :height "80%"}
+;;                                               :plot js/dimple.plot.pie
+                                              :plot :pie
+                                              :p-axis "sum_usage"
+                                              :c-axis "key"}}
+                                     {:type :es-chart :cursor :agg
+                                      :id "app_pie" :agg-key "APP AGG" :agg-top "apps"
+                                      :agg-view [:key :sum_usage]
+                                      :draw-fn :draw-ring
+                                      :chart {:bounds {:x "5%" :y "15%" :width "80%" :height "80%"}
+;;                                               :plot js/dimple.plot.pie
+                                              :plot :pie
+                                              :p-axis "sum_usage"
+                                              :c-axis "key"}}
+                                     {:type :es-chart :cursor :agg
+                                      :id "time_line" :agg-key "TIME AGG" :agg-top "traffic_over_time"
+                                      :agg-view [:key_as_string :sum_up :sum_down]
+                                      :draw-fn :draw-line :trans :trans-line
+                                      :chart {:bounds {:x "10%" :y "5%" :width "80%" :height "70%"}
+;;                                               :plot js/dimple.plot.line
+                                              :plot :line
+                                              :x-axis "key_as_string"
+                                              :y-axis "value"
+                                              :c-axis "type"}}
+                                     ]
+                                    [{:type :agg-table
+                                      :agg-key "SSID AGG" :agg-top "ssids"
+                                      :header [{:label "SSID" :agg :key}
+                                               {:label "Client Count" :agg :client_count}
+                                               {:label "Usage" :agg :sum_usage}]}
+                                     {:type :agg-table
+                                      :agg-key "APP AGG" :agg-top "apps"
+                                      :header [{:label "Application" :agg :key}
+                                               {:label "Usage" :agg :sum_usage}
+                                               {:label "UpLink" :agg :sum_up}
+                                               {:label "DownLink" :agg :sum_down}]}
+                                     {:type :agg-table
+                                      :agg-key "TIME AGG" :agg-top "traffic_over_time"
+                                      :header [{:label "TIME" :agg :key_as_string}
+                                               {:label "UpLink" :agg :sum_up}
+                                               {:label "DownLink" :agg :sum_down}]}
+                                     ]
+                                    ]
                           }))
 
-(defcomponent my-app [app owner]
-  (render [this] (html [:div
-                        (om/build header app)
-                        (om/build aggregator app
-                                  {:opts {:agg-key "SSID AGG"
-                                          :body {:aggs {:ssids
-                                                        {:terms {:field "ssid" :order {:sum_usage "desc"}}
-                                                         :aggs {:sum_usage {:sum {:field "usage"}}
-                                                                :client_count
-                                                                {:cardinality {:field "client_mac.hash"
-                                                                               :precision_threshold 50000}}}}}}}})
-                        (om/build aggregator app
-                                  {:opts {:agg-key "APP AGG"
-                                          :body {:aggs {:apps
-                                                        {:terms {:field "app" :order {:sum_usage "desc"}}
-                                                         :aggs {:sum_usage {:sum {:field "usage"}}
-                                                                :sum_up {:sum {:field "up"}}
-                                                                :sum_down {:sum {:field "down"}}}}}}}})
-                        (om/build aggregator app
-                                  {:opts {:agg-key "TIME AGG"
-                                          :body {:aggs {:traffic_over_time
-                                                        {:date_histogram
-                                                         {:field "timestamp" :interval "1h"
-                                                          :format "MM-dd kk:mm" :post_zone "+08:00"}
-                                                         :aggs {:sum_up {:sum {:field "up"}}
-                                                                :sum_down {:sum {:field "down"}}}}}}}})
-                        [:.row [:.col-lg-4 (om/build agg-summary app)]]
-                        [:.row
-                         [:.col-lg-3
-                          (om/build es-chart (:agg app)
-                                    {:opts {:id "ssid_pie"
-                                            :agg-key "SSID AGG"
-                                            :agg-top "ssids"
-                                            :agg-view [:key :sum_usage]
-                                            :chart {:bounds {:x "5%" :y "15%" :width "80%" :height "80%"}
-                                                    :plot js/dimple.plot.pie
-                                                    :p-axis "sum_usage"
-                                                    :c-axis "key"}
-                                            :draw-fn :draw-ring}})]
-                         [:.col-lg-3
-                          (om/build es-chart (:agg app)
-                                    {:opts {:id "app_pie"
-                                            :agg-key "APP AGG"
-                                            :agg-top "apps"
-                                            :agg-view [:key :sum_usage]
-                                            :chart {:bounds {:x "5%" :y "15%" :width "80%" :height "80%"}
-                                                    :plot js/dimple.plot.pie
-                                                    :p-axis "sum_usage"
-                                                    :c-axis "key"}
-                                            :draw-fn :draw-ring}})]
-                         [:.col-lg-3
-                          (om/build es-chart (:agg app)
-                                    {:opts {:id "time_line"
-                                            :agg-key "TIME AGG"
-                                            :agg-top "traffic_over_time"
-                                            :agg-view [:key_as_string :sum_up :sum_down]
-                                            :draw-fn :draw-line
-                                            :trans :trans-line
-                                            :chart {:bounds {:x "10%" :y "5%" :width "80%" :height "70%"}
-                                                    :plot js/dimple.plot.line
-                                                    :x-axis "key_as_string"
-                                                    :y-axis "value"
-                                                    :c-axis "type"}}})]
-                         ]
-                        [:.row
-                         [:.col-lg-3
-                          (om/build agg-table app
-                                    {:opts {:agg-key "SSID AGG"
-                                            :agg-top "ssids"
-                                            :header [{:label "SSID" :agg :key}
-                                                     {:label "Client Count" :agg :client_count}
-                                                     {:label "Usage" :agg :sum_usage}]}})]
-                         [:.col-lg-3
-                          (om/build agg-table app
-                                    {:opts {:agg-key "APP AGG"
-                                            :agg-top "apps"
-                                            :header [{:label "Application" :agg :key}
-                                                     {:label "Usage" :agg :sum_usage}
-                                                     {:label "UpLink" :agg :sum_up}
-                                                     {:label "DownLink" :agg :sum_down}]}})]
-                         [:.col-lg-3
-                          (om/build agg-table app
-                                    {:opts {:agg-key "TIME AGG"
-                                            :agg-top "traffic_over_time"
-                                            :header [{:label "TIME" :agg :key_as_string}
-                                                     {:label "UpLink" :agg :sum_up}
-                                                     {:label "DownLink" :agg :sum_down}]}})]
-                         ]
-                        ])))
+(defn- get-component
+  [widget-type]
+  (case widget-type
+    :es-chart es-chart
+    :agg-table agg-table
+    nil))
 
+(defn- build-component
+  [app widget]
+  (let [component (get-component (:type widget))
+        cursor (:cursor widget)]
+    (if component (om/build component (if cursor (get app cursor) app) {:opts widget}))))
+
+(defn- col-class
+  [count-per-row]
+  (case count-per-row
+    1 :.col-lg-12
+    2 :.col-lg-6
+    3 :.col-lg-4
+    4 :.col-lg-3
+    :.col-lg-3))
+
+(defn- build-row
+  [app row]
+  [:.row (for [widget row]
+           [(col-class (count row)) (build-component app widget)])])
+
+(defcomponent my-app [app owner]
+  (render [this] (html [:div (om/build header app)
+                        [:div (for [agg (:aggregators app)] (om/build aggregator app {:opts agg}))]
+                        [:.row [:.col-lg-4 (om/build agg-summary app)]]
+                        [:div (for [row (:widgets app)] (build-row app row))]])))
 
 (defn main []
   (om/root

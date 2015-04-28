@@ -14,7 +14,7 @@
     :agg "/es/avc_1d/avc/_search"
     "/es"))
 
-(def poll-interval 60000)
+(def poll-interval 30000)
 
 (defn commify [s]
   (let [s (reverse s)]
@@ -91,7 +91,7 @@
 ;;                       (.log js/console (pr-str agg-resp))
                       (om/update! app [:agg agg-key] agg-resp))
                     (<! (timeout poll-interval)))))
-  (render [_] (html [:.hide-agg "Aggregator:" (-> opts :agg-key)])))
+  (render [_] (html [:.hide "Aggregator:" (-> opts :agg-key)])))
 
 ;;;;;;;;;;
 ;; charts
@@ -111,6 +111,13 @@
         dimple-chart              (.setBounds (Chart. svg) (:x bounds) (:y bounds) (:width bounds) (:height bounds))]
     dimple-chart))
 
+(defn- ->plot
+  [dimple-chart]
+  (case dimple-chart
+    :pie js/dimple.plot.pie
+    :bar js/dimple.plot.bar
+    :line js/dimple.plot.line
+    nil))
 
 (defn- draw-bar [data div {:keys [id chart]}]
   (let [{:keys [bounds plot
@@ -118,7 +125,7 @@
         dimple-chart              (->dimple div id bounds)
         x                         (.addCategoryAxis dimple-chart "x" x-axis)
         y                         (.addMeasureAxis dimple-chart "y" y-axis)
-        s                         (.addSeries dimple-chart nil plot (clj->js [x y]))]
+        s                         (.addSeries dimple-chart nil (->plot plot) (clj->js [x y]))]
     (aset s "data" (clj->js data))
     (.addLegend dimple-chart "5%" "10%" "20%" "10%" "right")
     (.draw dimple-chart)))
@@ -129,7 +136,7 @@
                 p-axis c-axis]}   chart
         dimple-chart              (->dimple div id bounds)
         p                         (.addMeasureAxis dimple-chart "p" p-axis)
-        s                         (.addSeries dimple-chart c-axis plot (clj->js [p]))]
+        s                         (.addSeries dimple-chart c-axis (->plot plot) (clj->js [p]))]
     (aset s "innerRadius" "50%")
     (aset s "data" (clj->js data))
     (.addLegend dimple-chart "80%" "10%" "10%" "90%" "left")
@@ -142,12 +149,14 @@
         dimple-chart              (->dimple div id bounds)
         x                         (.addCategoryAxis dimple-chart "x" x-axis)
         y                         (.addMeasureAxis dimple-chart "y" y-axis)
-        s                         (.addSeries dimple-chart c-axis plot (clj->js [x y]))]
+        s                         (.addSeries dimple-chart c-axis (->plot plot) (clj->js [x y]))]
     (.addOrderRule x "Date")
     (aset s "interpolation" "cardinal")
     (aset s "data" (clj->js data))
     (.addLegend dimple-chart "95%" "0%" "5%" "20%" "right")
     (.draw dimple-chart)))
+
+
 
 (defn chart-fn [fn-name]
   (case fn-name

@@ -21,19 +21,13 @@
 
 (defroutes routes
   (resources "/react" {:root "react"})
-;;   (GET "/*" req (page))
   (GET "/" req (apply str (page)))
   (GET "/test" req
        (response {:foo "bar"}))
   (GET "/es/:idx/:idxType/_count" [idx idxType]
-;;        (jresp/json-response (es/es-count @es-host idx idxType)))
        (response (es/es-count @es-host idx idxType)))
   (POST "/es/:idx/:idxType/_search" [idx idxType :as req]
-;;         (jresp/json-response (es/es-search @es-host idx idxType (:body req))))
         (do
-          (println "req")
-          (println req)
-;;           (jresp/json-response (es/es-search @es-host idx idxType (:body req)))))
           (response (es/es-search @es-host idx idxType (:body req)))))
   (resources "/")
   (not-found "Not Found"))

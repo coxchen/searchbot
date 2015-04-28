@@ -14,7 +14,7 @@
     :agg "/es/avc_1d/avc/_search"
     "/es"))
 
-(def poll-interval 20000)
+(def poll-interval 60000)
 
 (defn commify [s]
   (let [s (reverse s)]
@@ -87,14 +87,9 @@
                                                         {:filtered
                                                          {:query {:match_all {}}
                                                           :filter {:range {:timestamp {:gte "now-12h" :lte "now"}}}}}})))]
-                      (if (= agg-key (keyword "TIME AGG"))
-                        (do
-                          (.log js/console (pr-str agg-key))
-                          (.log js/console (pr-str agg-resp))))
-                      (om/update! app [:agg agg-key] agg-resp)
-;;                       (.log js/console (pr-str "agg" (@app :agg)))
-;;                       (.log js/console (pr-str "agg keys" (-> @app :agg agg-key :aggregations keys)))
-                      )
+;;                       (.log js/console (pr-str agg-key))
+;;                       (.log js/console (pr-str agg-resp))
+                      (om/update! app [:agg agg-key] agg-resp))
                     (<! (timeout poll-interval)))))
   (render [_] (html [:.hide-agg "Aggregator:" (-> opts :agg-key)])))
 
@@ -142,18 +137,17 @@
 
 (defn- draw-line [data div {:keys [id chart]}]
   (let [{:keys [bounds plot
-                x-axis y-axis]}   chart
+                x-axis y-axis
+                c-axis       ]}   chart
         dimple-chart              (->dimple div id bounds)
         x                         (.addCategoryAxis dimple-chart "x" x-axis)
         y                         (.addMeasureAxis dimple-chart "y" y-axis)
-        s                         (.addSeries dimple-chart nil plot (clj->js [x y]))]
+        s                         (.addSeries dimple-chart c-axis plot (clj->js [x y]))]
     (.addOrderRule x "Date")
     (aset s "interpolation" "cardinal")
     (aset s "data" (clj->js data))
-    (.addLegend dimple-chart "5%" "10%" "20%" "10%" "right")
+    (.addLegend dimple-chart "95%" "0%" "5%" "20%" "right")
     (.draw dimple-chart)))
-
-
 
 (defn chart-fn [fn-name]
   (case fn-name
@@ -162,41 +156,51 @@
     :draw-line draw-line
     nil))
 
+(defn trans-line [agg-data agg-view]
+  (let [mapped (map (fn [data]
+                      (for [v (rest agg-view)]
+                        (merge (select-keys data [(first agg-view)])
+                               {:value (get data v) :type v})))
+                    agg-data)
+        flattened (flatten mapped)]
+    flattened))
 
-(defcomponent chart [cursor owner {:keys [id chart draw-fn] :as opts}]
-  (will-mount [_]
-              ;; Add event listener that will update width & height when window is resized
-              (.addEventListener js/window
-                                 "resize" (fn []
-                                            (let [{:keys [width height]} (get-div-dimensions id)]
-                                              (om/update! cursor :div {:width width :height height})))))
-  (render [_]
-          (let [{:keys [width height]} (:div cursor)]
-            (html [:div {:id id :width width :height height}])))
-  (did-mount [_]
-             (when-let [data (seq (:data cursor))]
-               ((chart-fn draw-fn) data (:div cursor) opts)))
-  (did-update [_ _ _]
-              (let [{:keys [width height]} (:div cursor)]
-                (let [n (.getElementById js/document id)]
-                  (while (.hasChildNodes n)
-                    (.removeChild n (.-lastChild n))))
-                (when-let [data (seq (:data cursor))]
-                  ((chart-fn draw-fn) data (:div cursor) opts)))))
+(defn trans-fn [fn-name]
+  (case fn-name
+    :trans-line trans-line
+    nil))
 
-(defn- flatten-agg-data
-  [agg-view agg-data]
-  (map (fn [data]
-         (if (map? (get data agg-view))
-           (assoc data agg-view (get-in data [agg-view :value]))
-           data))
-       agg-data))
+(defn- do-trans [trans agg-data agg-view]
+  (if trans (trans agg-data agg-view) agg-data))
+
+(defn- agg-val
+  [agg-data views]
+  (reduce merge
+          (map (fn [view]
+                 (if (map? (get agg-data view))
+                   {view (get-in agg-data [view :value])}
+                   (select-keys agg-data [view])))
+               views)))
+
+(defn- flatten-agg-buckets
+  [agg-view agg-buckets]
+  (map (fn [bucket]
+         (agg-val bucket agg-view))
+       agg-buckets))
 
 (defn- get-agg-buckets
   [cursor agg-key agg-top]
   (-> cursor (get-in [(keyword agg-key) :aggregations (keyword agg-top) :buckets]) seq))
 
-(defcomponent es-chart [cursor owner {:keys [id chart draw-fn agg-key agg-top agg-view] :as opts}]
+(defn- do-chart
+  [cursor {:keys [id chart agg-key agg-top agg-view trans draw-fn] :as opts}]
+  (when-let [data (get-agg-buckets cursor agg-key agg-top)]
+    (let [flattened (flatten-agg-buckets agg-view data)
+          transed (do-trans (trans-fn trans) flattened agg-view)]
+      ((chart-fn draw-fn) transed (:div cursor) opts))))
+
+
+(defcomponent es-chart [cursor owner {:keys [id] :as opts}]
   (will-mount [_]
               ;; Add event listener that will update width & height when window is resized
               (.addEventListener js/window
@@ -207,18 +211,9 @@
           (let [{:keys [width height]} (:div cursor)]
             (html [:div {:id id :width width :height height}])))
   (did-mount [_]
-             (when-let [data (get-agg-buckets cursor agg-key agg-top)]
-               ((chart-fn draw-fn) (flatten-agg-data agg-view data) (:div cursor) opts)))
+             (do-chart cursor opts))
   (did-update [_ _ _]
-              (let [{:keys [width height]} (:div cursor)]
-                (let [n (.getElementById js/document id)]
-                  (while (.hasChildNodes n)
-                    (.removeChild n (.-lastChild n))))
-                (when-let [data (get-agg-buckets cursor agg-key agg-top)]
-                  (let [flattened (flatten-agg-data agg-view data)]
-                    (if (= agg-key "TIME AGG")
-                      (do
-                        (.log js/console (pr-str agg-key))
-                        (.log js/console (pr-str flattened))
-                        ))
-                    ((chart-fn draw-fn) flattened (:div cursor) opts))))))
+              (let [n (.getElementById js/document id)]
+                (while (.hasChildNodes n)
+                  (.removeChild n (.-lastChild n))))
+              (do-chart cursor opts)))

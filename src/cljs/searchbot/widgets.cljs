@@ -1,7 +1,6 @@
 (ns searchbot.widgets
   (:require-macros [cljs.core.async.macros :refer [go alt!]])
   (:require [om.core :as om :include-macros true]
-;;             [om-tools.dom :as dom :include-macros true]
             [om-tools.core :refer-macros [defcomponent]]
             [sablono.core :as html :refer-macros [html]]
             [cljs-http.client :as http]
@@ -14,7 +13,7 @@
     :agg "/es/avc_1d/avc/_search"
     "/es"))
 
-(def poll-interval 30000)
+(def poll-interval 10000)
 
 (defn commify [s]
   (let [s (reverse s)]
@@ -74,9 +73,9 @@
                                  agg-top (-> opts :agg-top keyword)]
                              (for [x (-> app :agg (get agg-key) :aggregations agg-top :buckets)]
                                [:tr
-                                [:td (->> opts :header first :agg (get x))]
+                                [:td (->> opts :header first :agg keyword (get x))]
                                 (for [d (->> opts :header rest)]
-                                  [:td (-> x (get-in [(:agg d) :value]) str commify)])]))]]]])))
+                                  [:td (-> x (get-in [(keyword (:agg d)) :value]) str commify)])]))]]]])))
 
 (defcomponent aggregator [app owner opts]
   (will-mount [_]
@@ -114,9 +113,9 @@
 (defn- ->plot
   [dimple-chart]
   (case dimple-chart
-    :pie js/dimple.plot.pie
-    :bar js/dimple.plot.bar
-    :line js/dimple.plot.line
+    "pie" js/dimple.plot.pie
+    "bar" js/dimple.plot.bar
+    "line" js/dimple.plot.line
     nil))
 
 (defn- draw-bar [data div {:keys [id chart]}]
@@ -156,13 +155,11 @@
     (.addLegend dimple-chart "95%" "0%" "5%" "20%" "right")
     (.draw dimple-chart)))
 
-
-
 (defn chart-fn [fn-name]
   (case fn-name
-    :draw-bar  draw-bar
-    :draw-ring draw-ring
-    :draw-line draw-line
+    "draw-bar"  draw-bar
+    "draw-ring" draw-ring
+    "draw-line" draw-line
     nil))
 
 (defn trans-line [agg-data agg-view]
@@ -176,7 +173,7 @@
 
 (defn trans-fn [fn-name]
   (case fn-name
-    :trans-line trans-line
+    "trans-line" trans-line
     nil))
 
 (defn- do-trans [trans agg-data agg-view]
@@ -204,7 +201,8 @@
 (defn- do-chart
   [cursor {:keys [id chart agg-key agg-top agg-view trans draw-fn] :as opts}]
   (when-let [data (get-agg-buckets cursor agg-key agg-top)]
-    (let [flattened (flatten-agg-buckets agg-view data)
+    (let [agg-view (map keyword agg-view)
+          flattened (flatten-agg-buckets agg-view data)
           transed (do-trans (trans-fn trans) flattened agg-view)]
       ((chart-fn draw-fn) transed (:div cursor) opts))))
 
@@ -226,3 +224,56 @@
                 (while (.hasChildNodes n)
                   (.removeChild n (.-lastChild n))))
               (do-chart cursor opts)))
+
+
+;;;;;;;;;;;;;;;;;;
+;; meta components
+
+(defn fetch-meta [url]
+  (let [c (chan)]
+    (go (let [{body :body} (<! (http/get url))]
+          (>! c body)))
+    c))
+
+(defcomponent aggregators [app owner opts]
+  (will-mount [_]
+              (go (while true
+                    (let [{_aggs :aggregators} (<! (fetch-meta "/_aggregators"))]
+                      (om/update! app [:aggregators] _aggs))
+                    (<! (timeout poll-interval)))))
+  (render [_] (html [:div (for [agg (:aggregators app)] (om/build aggregator app {:opts agg}))])))
+
+(defn- get-component
+  [widget-type]
+  (case widget-type
+    "es-chart" es-chart
+    "agg-table" agg-table
+    nil))
+
+(defn- build-component
+  [app widget]
+  (let [component (get-component (:type widget))
+        cursor (-> widget :cursor keyword)]
+    (if component (om/build component (if cursor (get app cursor) app) {:opts widget}))))
+
+(defn- col-class
+  [count-per-row]
+  (case count-per-row
+    1 :.col-lg-12
+    2 :.col-lg-6
+    3 :.col-lg-4
+    4 :.col-lg-3
+    :.col-lg-3))
+
+(defn- build-row [app row]
+  [:.row (for [widget row]
+           [(col-class (count row)) (build-component app widget)])])
+
+(defcomponent widgets [app owner opts]
+  (will-mount [_]
+              (go (while true
+                    (let [{_widgets :widgets} (<! (fetch-meta "/_widgets"))]
+                      (om/update! app [:widgets] _widgets))
+                    (<! (timeout poll-interval)))))
+  (render [_] (html [:div (for [row (:widgets app)] (build-row app row))])))
+

@@ -13,7 +13,7 @@
     :agg "/es/avc_1d/avc/_search"
     "/es"))
 
-(def poll-interval 10000)
+(def poll-interval 30000)
 
 (defn commify [s]
   (let [s (reverse s)]
@@ -276,4 +276,19 @@
                       (om/update! app [:widgets] _widgets))
                     (<! (timeout poll-interval)))))
   (render [_] (html [:div (for [row (:widgets app)] (build-row app row))])))
+
+;;;;;;;;;;
+;; modal
+
+(defcomponent modal [app owner opts]
+  (render [_]
+          (html [:div
+                 [:button.btn.btn-default.pull-right {:type "button" :data-remodal-target "show_modal" :aria-label "Left Align"}
+                  [:span.glyphicon.glyphicon-cog] " Design"]
+                 [:div {:class "remodal" :data-remodal-id "show_modal"}
+                  [:h1 "Remodal"]
+                  [:p "Flat, responsive, lightweight, fast, easy customizable modal window plugin with declarative state notation and hash tracking."]
+                  [:br]
+                  [:a {:class "remodal-cancel" :href "#"} "Cancel"]
+                  [:a {:class "remodal-confirm" :href="#"} "OK"]]])))
 

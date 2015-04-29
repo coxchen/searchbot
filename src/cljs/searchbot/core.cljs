@@ -7,7 +7,7 @@
             [cljs-http.client :as http]
             [goog.events :as events]
             [cljs.core.async :refer [put! <! >! chan timeout]]
-            [searchbot.widgets :refer [header agg-summary aggregators widgets]]))
+            [searchbot.widgets :refer [header agg-summary aggregators widgets modal]]))
 
 (defonce app-state (atom {:header-text "AVC realtime aggregation"
                           :avc-count 0
@@ -81,8 +81,12 @@
                                     ]
                           }))
 
+
+
 (defcomponent my-app [app owner]
-  (render [this] (html [:div (om/build header app)
+  (render [this] (html [:div
+                        (om/build modal app)
+                        (om/build header app)
                         (om/build aggregators app)
                         [:.row [:.col-lg-4 (om/build agg-summary app)]]
 ;;                         [:div (for [row (:widgets app)] (build-row app row))]

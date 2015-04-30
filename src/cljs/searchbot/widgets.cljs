@@ -270,11 +270,11 @@
            [(col-class (count row)) (build-component app widget)])])
 
 (defcomponent widgets [app owner opts]
-  (will-mount [_]
-              (go (while true
-                    (let [{_widgets :widgets} (<! (fetch-meta "/_widgets"))]
-                      (om/update! app [:widgets] _widgets))
-                    (<! (timeout poll-interval)))))
+;;   (will-mount [_]
+;;               (go (while true
+;;                     (let [{_widgets :widgets} (<! (fetch-meta "/_widgets"))]
+;;                       (om/update! app [:widgets] _widgets))
+;;                     (<! (timeout poll-interval)))))
   (render [_] (html [:div (for [row (:widgets app)] (build-row app row))])))
 
 ;;;;;;;;;;
@@ -285,10 +285,20 @@
           (html [:div
                  [:button.btn.btn-default.pull-right {:type "button" :data-remodal-target "show_modal" :aria-label "Left Align"}
                   [:span.glyphicon.glyphicon-cog] " Design"]
-                 [:div {:class "remodal" :data-remodal-id "show_modal"}
-                  [:h1 "Remodal"]
-                  [:p "Flat, responsive, lightweight, fast, easy customizable modal window plugin with declarative state notation and hash tracking."]
+                 [:div#code-display {:class "remodal" :data-remodal-id "show_modal"}
+                  [:h2 "Widgets"]
+                  [:textarea#mywidgets {:rows "10" :cols "60"}
+;;                    (pr-str (:widgets app))
+                   (.stringify js/JSON (clj->js (:widgets app)) nil 4)
+                   ]
                   [:br]
                   [:a {:class "remodal-cancel" :href "#"} "Cancel"]
-                  [:a {:class "remodal-confirm" :href="#"} "OK"]]])))
+                  [:a {:class "remodal-confirm" :href="#"} "OK"]
+                  ]]))
+  (did-mount [_]
+             (.fromTextArea js/CodeMirror
+                            (.getElementById js/document "mywidgets"
+                                             {:lineNumbers true
+                                              :mode: "clojure"})))
+  )
 

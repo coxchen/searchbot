@@ -35,49 +35,49 @@
 ;;                                                                :sum_down {:sum {:field "down"}}}}}}}
                                         ]
                           :widgets [
-;;                                     [{:type "es-chart" :cursor "agg"
-;;                                       :id "ssid_pie" :agg-key "SSID AGG" :agg-top "ssids"
-;;                                       :agg-view ["key" "sum_usage"]
-;;                                       :draw-fn "draw-ring"
-;;                                       :chart {:bounds {:x "5%" :y "15%" :width "80%" :height "80%"}
-;;                                               :plot "pie"
-;;                                               :p-axis "sum_usage"
-;;                                               :c-axis "key"}}
-;;                                      {:type "es-chart" :cursor "agg"
-;;                                       :id "app_pie" :agg-key "APP AGG" :agg-top "apps"
-;;                                       :agg-view ["key" "sum_usage"]
-;;                                       :draw-fn "draw-ring"
-;;                                       :chart {:bounds {:x "5%" :y "15%" :width "80%" :height "80%"}
-;;                                               :plot "pie"
-;;                                               :p-axis "sum_usage"
-;;                                               :c-axis "key"}}
-;;                                      {:type "es-chart" :cursor "agg"
-;;                                       :id "time_line" :agg-key "TIME AGG" :agg-top "traffic_over_time"
-;;                                       :agg-view ["key_as_string" "sum_up" "sum_down"]
-;;                                       :draw-fn "draw-line" :trans "trans-line"
-;;                                       :chart {:bounds {:x "10%" :y "5%" :width "80%" :height "70%"}
-;;                                               :plot "line"
-;;                                               :x-axis "key_as_string"
-;;                                               :y-axis "value"
-;;                                               :c-axis "type"}}
-;;                                      ]
-;;                                     [{:type "agg-table"
-;;                                       :agg-key "SSID AGG" :agg-top "ssids"
-;;                                       :header [{:label "SSID" :agg "key"}
-;;                                                {:label "Client Count" :agg "client_count"}
-;;                                                {:label "Usage" :agg "sum_usage"}]}
-;;                                      {:type "agg-table"
-;;                                       :agg-key "APP AGG" :agg-top "apps"
-;;                                       :header [{:label "Application" :agg "key"}
-;;                                                {:label "Usage" :agg "sum_usage"}
-;;                                                {:label "UpLink" :agg "sum_up"}
-;;                                                {:label "DownLink" :agg "sum_down"}]}
-;;                                      {:type "agg-table"
-;;                                       :agg-key "TIME AGG" :agg-top "traffic_over_time"
-;;                                       :header [{:label "TIME" :agg "key_as_string"}
-;;                                                {:label "UpLink" :agg "sum_up"}
-;;                                                {:label "DownLink" :agg "sum_down"}]}
-;;                                      ]
+                                    [{:type "es-chart" :cursor "agg"
+                                      :id "ssid_pie" :agg-key "SSID AGG" :agg-top "ssids"
+                                      :agg-view ["key" "sum_usage"]
+                                      :draw-fn "draw-ring"
+                                      :chart {:bounds {:x "5%" :y "15%" :width "80%" :height "80%"}
+                                              :plot "pie"
+                                              :p-axis "sum_usage"
+                                              :c-axis "key"}}
+                                     {:type "es-chart" :cursor "agg"
+                                      :id "app_pie" :agg-key "APP AGG" :agg-top "apps"
+                                      :agg-view ["key" "sum_usage"]
+                                      :draw-fn "draw-ring"
+                                      :chart {:bounds {:x "5%" :y "15%" :width "80%" :height "80%"}
+                                              :plot "pie"
+                                              :p-axis "sum_usage"
+                                              :c-axis "key"}}
+                                     {:type "es-chart" :cursor "agg"
+                                      :id "time_line" :agg-key "TIME AGG" :agg-top "traffic_over_time"
+                                      :agg-view ["key_as_string" "sum_up" "sum_down"]
+                                      :draw-fn "draw-line" :trans "trans-line"
+                                      :chart {:bounds {:x "10%" :y "5%" :width "80%" :height "70%"}
+                                              :plot "line"
+                                              :x-axis "key_as_string"
+                                              :y-axis "value"
+                                              :c-axis "type"}}
+                                     ]
+                                    [{:type "agg-table"
+                                      :agg-key "SSID AGG" :agg-top "ssids"
+                                      :header [{:label "SSID" :agg "key"}
+                                               {:label "Client Count" :agg "client_count"}
+                                               {:label "Usage" :agg "sum_usage"}]}
+                                     {:type "agg-table"
+                                      :agg-key "APP AGG" :agg-top "apps"
+                                      :header [{:label "Application" :agg "key"}
+                                               {:label "Usage" :agg "sum_usage"}
+                                               {:label "UpLink" :agg "sum_up"}
+                                               {:label "DownLink" :agg "sum_down"}]}
+                                     {:type "agg-table"
+                                      :agg-key "TIME AGG" :agg-top "traffic_over_time"
+                                      :header [{:label "TIME" :agg "key_as_string"}
+                                               {:label "UpLink" :agg "sum_up"}
+                                               {:label "DownLink" :agg "sum_down"}]}
+                                     ]
                                     ]
                           }))
 

@@ -5,3 +5,13 @@ h1 {
 .hide {
     display: none;
 }
+
+#code-display * {
+    text-align: left;
+    font-family: 'Inconsolata', Arial, serif;
+}
+
+/* .CodeMirror-code {
+    text-align: left;
+    font-family: 'Inconsolata', Arial, serif;
+} */

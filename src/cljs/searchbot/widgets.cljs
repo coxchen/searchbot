@@ -236,11 +236,11 @@
     c))
 
 (defcomponent aggregators [app owner opts]
-  (will-mount [_]
-              (go (while true
-                    (let [{_aggs :aggregators} (<! (fetch-meta "/_aggregators"))]
-                      (om/update! app [:aggregators] _aggs))
-                    (<! (timeout poll-interval)))))
+;;   (will-mount [_]
+;;               (go (while true
+;;                     (let [{_aggs :aggregators} (<! (fetch-meta "/_aggregators"))]
+;;                       (om/update! app [:aggregators] _aggs))
+;;                     (<! (timeout poll-interval)))))
   (render [_] (html [:div (for [agg (:aggregators app)] (om/build aggregator app {:opts agg}))])))
 
 (defn- get-component
@@ -299,6 +299,72 @@
              (.fromTextArea js/CodeMirror
                             (.getElementById js/document "mywidgets"
                                              {:lineNumbers true
-                                              :mode: "clojure"})))
+                                              :mode: "javascript"})))
   )
+
+;;;;;;;;;;;;;;;;
+;; widget editor
+
+(defn- toggle-sub-menu
+  [app]
+  (let [sub-open? (get-in @app [:menu :sub-open?])]
+    (if sub-open?
+      (.remove js/window.classie js/document.body "show-submenu")
+      (.add js/window.classie js/document.body "show-submenu"))
+;;     (.log js/console (pr-str (:menu @app)))
+    (om/update! app [:menu :sub-open?] (not sub-open?))
+;;     (.log js/console (pr-str (:menu @app)))
+    ))
+
+
+
+(defn- widget-class
+  [widget]
+  (case (:type widget)
+    "es-chart" (case (:draw-fn widget)
+                 "draw-line" "fa fa-fw fa-line-chart"
+                 "draw-ring" "fa fa-fw fa-pie-chart")
+    "agg-table" "fa fa-fw fa-table"))
+
+(defcomponent widgets-grid [app owner opts]
+  (will-mount
+   [_]
+   (.addEventListener js/window
+                      "mousedown" (fn [ev]
+                                    (let [target (.-target ev)
+                                          sub-open? (get-in @app [:menu :sub-open?])]
+                                      (.log js/console (pr-str target))
+;;                                       (.log js/console (pr-str (:menu @app)))
+                                      (if sub-open? (toggle-sub-menu app))
+;;                                       (.log js/console (pr-str (:menu @app)))
+                                      ))))
+  (render [_]
+          (html [:div.fc-calendar.fc-five-rows
+                 [:div.fc-head
+                  [:div "COL 1"]
+                  [:div "COL 2"]
+                  [:div "COL 3"]
+                  [:div "COL 4"]]
+                 [:div.fc-body
+                  (for [widget-row (:widgets app)]
+                    [:div.fc-row
+                     (for [w widget-row]
+                       [:div {:on-click #(toggle-sub-menu app)}
+                        [:span.fc-date [:i {:class (widget-class w)}]]])])
+                  ]])))
+
+(defcomponent counter [data :- {:init js/Number} owner]
+  (will-mount [_]
+              (om/set-state! owner :n (:init data)))
+  (render-state [_ {:keys [n]}]
+                (html [:div
+                       [:span (str "Count: " n)]
+                       [:button
+                        {:on-click #(om/set-state! owner :n (inc n))}
+                        "+"]
+                       [:button
+                        {:on-click #(om/set-state! owner :n (dec n))}
+                        "-"]])))
+
+
 

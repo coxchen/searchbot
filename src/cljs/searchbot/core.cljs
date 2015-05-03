@@ -7,9 +7,10 @@
             [cljs-http.client :as http]
             [goog.events :as events]
             [cljs.core.async :refer [put! <! >! chan timeout]]
-            [searchbot.widgets :refer [header agg-summary aggregators widgets modal]]))
+            [searchbot.widgets :refer [header agg-summary aggregators widgets modal widgets-grid counter]]))
 
 (defonce app-state (atom {:header-text "AVC realtime aggregation"
+                          :menu {:top-open? false :sub-open? false}
                           :avc-count 0
                           :agg {:div {:width "90%" :height 300}}
                           :aggregators [
@@ -86,7 +87,7 @@
 (defcomponent my-app [app owner]
   (render [this] (html [:div
                         (om/build modal app)
-                        (om/build header app)
+;;                         (om/build header app)
                         (om/build aggregators app)
                         [:.row [:.col-lg-4 (om/build agg-summary app)]]
 ;;                         [:div (for [row (:widgets app)] (build-row app row))]
@@ -94,4 +95,9 @@
 
 (defn main []
   (om/root my-app app-state
-    {:target (. js/document (getElementById "app"))}))
+    {:target (. js/document (getElementById "app"))})
+  (om/root widgets-grid app-state
+    {:target (. js/document (getElementById "calendar"))})
+  (om/root counter {:init 5}
+         {:target (. js/document (getElementById "counter"))})
+  )

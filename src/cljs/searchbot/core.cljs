@@ -7,33 +7,36 @@
             [cljs-http.client :as http]
             [goog.events :as events]
             [cljs.core.async :refer [put! <! >! chan timeout]]
-            [searchbot.widgets :refer [header agg-summary aggregators widgets modal widgets-grid counter]]))
+            [searchbot.widgets :refer [off-canvas header agg-summary aggregators widgets widgets-grid counter]]))
 
 (defonce app-state (atom {:header-text "AVC realtime aggregation"
-                          :menu {:top-open? false :sub-open? false}
+                          :menu {:top-open? false
+                                 :sub-open? false
+                                 :selected {}
+                                 :cm nil}
                           :avc-count 0
                           :agg {:div {:width "90%" :height 300}}
                           :aggregators [
-;;                                         {:agg-key "SSID AGG"
-;;                                          :body {:aggs {:ssids
-;;                                                        {:terms {:field "ssid" :order {:sum_usage "desc"}}
-;;                                                         :aggs {:sum_usage {:sum {:field "usage"}}
-;;                                                                :client_count
-;;                                                                {:cardinality {:field "client_mac.hash"
-;;                                                                               :precision_threshold 50000}}}}}}}
-;;                                         {:agg-key "APP AGG"
-;;                                          :body {:aggs {:apps
-;;                                                        {:terms {:field "app" :order {:sum_usage "desc"}}
-;;                                                         :aggs {:sum_usage {:sum {:field "usage"}}
-;;                                                                :sum_up {:sum {:field "up"}}
-;;                                                                :sum_down {:sum {:field "down"}}}}}}}
-;;                                         {:agg-key "TIME AGG"
-;;                                          :body {:aggs {:traffic_over_time
-;;                                                        {:date_histogram
-;;                                                         {:field "timestamp" :interval "1h"
-;;                                                          :format "MM-dd kk:mm" :post_zone "+08:00"}
-;;                                                         :aggs {:sum_up {:sum {:field "up"}}
-;;                                                                :sum_down {:sum {:field "down"}}}}}}}
+                                        {:agg-key "SSID AGG"
+                                         :body {:aggs {:ssids
+                                                       {:terms {:field "ssid" :order {:sum_usage "desc"}}
+                                                        :aggs {:sum_usage {:sum {:field "usage"}}
+                                                               :client_count
+                                                               {:cardinality {:field "client_mac.hash"
+                                                                              :precision_threshold 50000}}}}}}}
+                                        {:agg-key "APP AGG"
+                                         :body {:aggs {:apps
+                                                       {:terms {:field "app" :order {:sum_usage "desc"}}
+                                                        :aggs {:sum_usage {:sum {:field "usage"}}
+                                                               :sum_up {:sum {:field "up"}}
+                                                               :sum_down {:sum {:field "down"}}}}}}}
+                                        {:agg-key "TIME AGG"
+                                         :body {:aggs {:traffic_over_time
+                                                       {:date_histogram
+                                                        {:field "timestamp" :interval "1h"
+                                                         :format "MM-dd kk:mm" :post_zone "+08:00"}
+                                                        :aggs {:sum_up {:sum {:field "up"}}
+                                                               :sum_down {:sum {:field "down"}}}}}}}
                                         ]
                           :widgets [
                                     [{:type "es-chart" :cursor "agg"
@@ -85,19 +88,17 @@
 
 
 (defcomponent my-app [app owner]
-  (render [this] (html [:div
-                        (om/build modal app)
-;;                         (om/build header app)
-                        (om/build aggregators app)
-                        [:.row [:.col-lg-4 (om/build agg-summary app)]]
-;;                         [:div (for [row (:widgets app)] (build-row app row))]
-                        (om/build widgets app)])))
+  (render [this] (html
+                  [:div
+                   (om/build header app)
+                   (om/build aggregators app)
+                   [:.row [:.col-lg-4 (om/build agg-summary app)]]
+                   (om/build widgets app)])))
 
 (defn main []
-  (om/root my-app app-state
-    {:target (. js/document (getElementById "app"))})
-  (om/root widgets-grid app-state
-    {:target (. js/document (getElementById "calendar"))})
-  (om/root counter {:init 5}
-         {:target (. js/document (getElementById "counter"))})
+;;   (om/root my-app app-state {:target (. js/document (getElementById "app"))})
+  (om/root off-canvas app-state {:target js/document.body
+                                 :opts {:content my-app}})
+  (om/root widgets-grid app-state {:target (. js/document (getElementById "top-menu-body"))})
+;;   (om/root counter {:init 5} {:target (. js/document (getElementById "counter"))})
   )

@@ -1,0 +1,78 @@
+/* CSS adopted from Calendario style http://tympanus.net/codrops/2012/11/27/calendario-a-flexible-calendar-plugin/ */
+
+.grid-container {
+	height: 80%;
+	height: calc(100% - 4.5em);
+	margin-top: 2em;
+	width: 100%;
+	position: relative;
+}
+
+.grid-content {
+	width: 100%;
+	height: 100%;
+}
+
+.grid-content .grid-head {
+	height: 35px;
+	text-transform: uppercase;
+	line-height: 30px;
+	letter-spacing: 1px;
+	font-size: 0.75em;
+}
+
+.grid-content .grid-row > div,
+.grid-content .grid-head > div {
+	float: left;
+	height: 100%;
+	width: 23%;
+	position: relative;
+	text-align: center;
+	font-weight: bold;
+}
+
+.grid-content .grid-head > div {
+	border-bottom: 1px solid #000;
+	border-bottom-color: initial;
+}
+
+.grid-content .grid-body {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	height: calc(100% - 35px);
+}
+
+.grid-content .grid-row {
+	width: 100%;
+}
+
+.grid-five-rows .grid-row {
+	height: 20%;
+}
+
+.grid-content .grid-row > div {
+	cursor: pointer;
+	padding: 4px;
+	overflow: hidden;
+	position: relative;
+}
+
+.grid-content .grid-row > div:not(:empty):hover {
+	background: rgba(180,186,210,0.3);
+}
+
+.grid-content .grid-row > div > span.grid-cell {
+	position: absolute;
+  width: 23%;
+	height: 20px;
+	font-size: 20px;
+	line-height: 20px;
+	color: #686a6e;
+	bottom: 5px;
+	right: 5px;
+	top: 50%;
+	left: 50%;
+	text-align: center;
+	margin: -10px 0 0 -15px;
+}

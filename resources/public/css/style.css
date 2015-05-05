@@ -6,12 +6,14 @@ h1 {
     display: none;
 }
 
-#code-display * {
-    text-align: left;
-    font-family: 'Inconsolata', Arial, serif;
-}
-
-/* .CodeMirror-code {
+/* #code-display * {
     text-align: left;
     font-family: 'Inconsolata', Arial, serif;
 } */
+
+.CodeMirror {
+    border: 1px solid #eee;
+    height: 90%;
+    overflow-y: auto;
+/*     font-family: 'Inconsolata', Arial, serif; */
+}

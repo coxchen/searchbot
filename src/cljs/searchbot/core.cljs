@@ -14,7 +14,7 @@
                                  :sub-open? false
                                  :selected {}
                                  :cm nil}
-                          :avc-count 0
+                          :es-count 0
                           :agg {:div {:width "90%" :height 300}}
                           :aggregators [{:agg-key "SSID AGG"
                                          :body {:aggs {:ssids

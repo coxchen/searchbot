@@ -3,8 +3,8 @@
             [om-tools.core :refer-macros [defcomponent]]
             [sablono.core :as html :refer-macros [html]]))
 
-;;;;;;;;;;;;;;;;
-;; widget editor
+;;;;;;;;;;;;;;;;;;
+;; off-canvas menu
 
 
 (defn- class-names [elem] (-> elem .-className (clojure.string/split #" ") set))
@@ -18,14 +18,12 @@
     (aset elem "className" (clojure.string/join " " (disj names a-class-name)))))
 
 (defn- toggle-sub-menu
-  [app & widget]
+  [app]
   (let [sub-open? (get-in @app [:menu :sub-open?])]
     (if sub-open?
       (remove-class! js/document.body "show-submenu")
       (add-class! js/document.body "show-submenu"))
-    (om/update! app [:menu :sub-open?] (not sub-open?))
-    (if widget (do
-                 (om/update! app [:menu :selected] (first widget))))))
+    (om/update! app [:menu :sub-open?] (not sub-open?))))
 
 (defn- toggle-top-menu
   [app]
@@ -41,6 +39,39 @@
       (-> (js/$ target) (.closest elem-id) .-length pos?))))
 
 
+(defcomponent off-canvas [app owner opts]
+  (will-mount
+   [_]
+   (.addEventListener js/window
+                      "mousedown" (fn [ev]
+                                    (let [close-top? (and (get-in @app [:menu :top-open?])
+                                                          (not (or ((within? "#top-menu") ev)
+                                                                   ((within? "#sub-menu") ev))))
+                                          close-sub? (and (get-in @app [:menu :sub-open?])
+                                                          (not ((within? "#sub-menu") ev)))]
+                                      (if close-top? (toggle-top-menu app))
+                                      (if close-sub? (toggle-sub-menu app))))))
+  (render [_]
+          (html [:div.container
+                 [:div#top-menu.menu-wrap {:data-level "1" }
+                  [:nav.menu
+                   [:h2 (-> opts :top-menu :header)]
+                   (om/build (-> opts :top-menu :content) app)]]
+                 [:div#sub-menu.menu-wrap {:data-level "2" }
+                  [:nav.menu
+                   [:h2 (-> opts :sub-menu :header)]
+                   (om/build (-> opts :sub-menu :content) app)]]
+                 [:button#open-button.menu-button {:on-click #(toggle-top-menu app)}
+                  [:i.fa.fa-fw.fa-cogs]
+                  [:span "Open Menu"]]
+                 [:div.content-wrap
+                  [:div.content
+                   [:div.container-fluid {:style {:max-width "90%" :padding-left 10}}
+                    (om/build (:content opts) app)]]]])))
+
+;;;;;;;;;;;;;;;;
+;; menu contents
+
 (defn- widget-class
   [widget]
   (case (:type widget)
@@ -48,6 +79,24 @@
                  "draw-line" "fa fa-fw fa-line-chart"
                  "draw-ring" "fa fa-fw fa-pie-chart")
     "agg-table" "fa fa-fw fa-table"))
+
+(defcomponent widgets-grid [app owner opts]
+  (render [_]
+          (html [:div.grid-container
+                 [:div.grid-content.grid-five-rows
+                  [:div.grid-head
+                   [:div "COL 1"]
+                   [:div "COL 2"]
+                   [:div "COL 3"]
+                   [:div "COL 4"]]
+                  [:div.grid-body
+                   (for [widget-row (:widgets app)]
+                     [:div.grid-row
+                      (for [w widget-row]
+                        [:div {:on-click #(do
+                                            (toggle-sub-menu app)
+                                            (om/update! app [:menu :selected] w))}
+                         [:span.grid-cell [:i {:class (widget-class w)}]]])])]]])))
 
 (defcomponent widget-detail [app owner opts]
   (render [_]
@@ -64,64 +113,3 @@
                                      {:lineNumbers true
                                       :mode: "javascript"})]
                (om/update! app [:menu :cm] cm))))
-
-
-(defcomponent widgets-grid [app owner opts]
-  (will-mount
-   [_]
-   (.addEventListener js/window
-                      "mousedown" (fn [ev]
-                                    (let [target (.-target ev)
-                                          sub-open? (get-in @app [:menu :sub-open?])
-                                          close-sub? (and sub-open? (not ((within? "#sub-menu") ev)))]
-                                      (if close-sub? (toggle-sub-menu app))))))
-  (render [_]
-          (html [:div.grid-content.grid-five-rows
-                 [:div.grid-head
-                  [:div "COL 1"]
-                  [:div "COL 2"]
-                  [:div "COL 3"]
-                  [:div "COL 4"]]
-                 [:div.grid-body
-                  (for [widget-row (:widgets app)]
-                    [:div.grid-row
-                     (for [w widget-row]
-                       [:div {:on-click #(toggle-sub-menu app w)}
-                        [:span.grid-cell [:i {:class (widget-class w)}]]])])
-                  ]])))
-
-
-(defcomponent off-canvas [app owner opts]
-  (will-mount
-   [_]
-   (.addEventListener js/window
-                      "mousedown" (fn [ev]
-                                    (let [target (.-target ev)
-                                          top-open? (get-in @app [:menu :top-open?])
-                                          close-top? (and top-open?
-                                                          (not (or ((within? "#top-menu") ev)
-                                                                   ((within? "#sub-menu") ev))))]
-                                      (if close-top? (toggle-top-menu app))))))
-  (render [_]
-          (html [:div.container
-                 [:div#top-menu.menu-wrap {:data-level "1" }
-                  [:nav.menu
-                   [:h2 [:span "Widgets"]]
-                   [:div#top-menu-body.grid-container]]
-                  ]
-                 [:div#sub-menu.menu-wrap {:data-level "2" }
-                  [:nav.menu
-                   [:h2 "Widget Design"]
-                   (om/build widget-detail app)
-                   ]
-                  ]
-                 [:button#open-button.menu-button {:on-click #(toggle-top-menu app)}
-                  [:i.fa.fa-fw.fa-cogs]
-                  [:span "Open Menu"]]
-                 [:div.content-wrap
-                  [:div.content
-                   [:div.container-fluid {:style {:max-width "90%" :padding-left 10}}
-                    (om/build (:content opts) app)
-                    ]
-                   ]]
-                 ])))

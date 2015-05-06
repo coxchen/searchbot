@@ -8,7 +8,7 @@
             [goog.events :as events]
             [cljs.core.async :refer [put! <! >! chan timeout]]
             [searchbot.widgets :refer [header agg-summary aggregators widgets]]
-            [searchbot.menus :refer [off-canvas widgets-grid]]))
+            [searchbot.menus :refer [off-canvas widgets-grid widget-detail]]))
 
 (defonce app-state (atom {:header-text "AVC realtime aggregation"
                           :menu {:top-open? false
@@ -93,6 +93,10 @@
 
 (defn main []
 ;;   (om/root my-app app-state {:target (. js/document (getElementById "app"))})
-  (om/root off-canvas app-state {:target js/document.body :opts {:content my-app}})
-  (om/root widgets-grid app-state {:target (. js/document (getElementById "top-menu-body"))})
+  (om/root off-canvas
+           app-state
+           {:target js/document.body
+            :opts {:content my-app
+                   :top-menu {:content widgets-grid :header "Widgets"}
+                   :sub-menu {:content widget-detail :header "Widget Design"}}})
   )

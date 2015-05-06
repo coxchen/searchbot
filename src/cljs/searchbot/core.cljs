@@ -7,7 +7,8 @@
             [cljs-http.client :as http]
             [goog.events :as events]
             [cljs.core.async :refer [put! <! >! chan timeout]]
-            [searchbot.widgets :refer [off-canvas header agg-summary aggregators widgets widgets-grid]]))
+            [searchbot.widgets :refer [header agg-summary aggregators widgets]]
+            [searchbot.menus :refer [off-canvas widgets-grid]]))
 
 (defonce app-state (atom {:header-text "AVC realtime aggregation"
                           :menu {:top-open? false

@@ -144,12 +144,12 @@
 (defn- draw-line [data div {:keys [id chart]}]
   (let [{:keys [bounds plot
                 x-axis y-axis
-                c-axis       ]}   chart
+                c-axis x-order]}  chart
         dimple-chart              (->dimple div id bounds)
         x                         (.addCategoryAxis dimple-chart "x" x-axis)
         y                         (.addMeasureAxis dimple-chart "y" y-axis)
         s                         (.addSeries dimple-chart c-axis (->plot plot) (clj->js [x y]))]
-    (.addOrderRule x "Date")
+    (.addOrderRule x x-order)
     (aset s "interpolation" "cardinal")
     (aset s "data" (clj->js data))
     (.addLegend dimple-chart "95%" "0%" "5%" "20%" "right")
@@ -164,8 +164,8 @@
 
 (defn trans-line [agg-data agg-view]
   (let [mapped (map (fn [data]
-                      (for [v (rest agg-view)]
-                        (merge (select-keys data [(first agg-view)])
+                      (for [v (drop 2 agg-view)]
+                        (merge (select-keys data (vec (take 2 agg-view)))
                                {:value (get data v) :type v})))
                     agg-data)
         flattened (flatten mapped)]
@@ -173,7 +173,7 @@
 
 (defn trans-fn [fn-name]
   (case fn-name
-    "trans-line" trans-line
+    "draw-line" trans-line
     nil))
 
 (defn- do-trans [trans agg-data agg-view]
@@ -199,11 +199,11 @@
   (-> cursor (get-in [(keyword agg-key) :aggregations (keyword agg-top) :buckets]) seq))
 
 (defn- do-chart
-  [cursor {:keys [id chart agg-key agg-top agg-view trans draw-fn] :as opts}]
+  [cursor {:keys [id chart agg-key agg-top agg-view draw-fn] :as opts}]
   (when-let [data (get-agg-buckets cursor agg-key agg-top)]
     (let [agg-view (map keyword agg-view)
           flattened (flatten-agg-buckets agg-view data)
-          transed (do-trans (trans-fn trans) flattened agg-view)]
+          transed (do-trans (trans-fn draw-fn) flattened agg-view)]
       ((chart-fn draw-fn) transed (:div cursor) opts))))
 
 

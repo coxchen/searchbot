@@ -20,6 +20,7 @@
     "d3": "~3.5.5",
     "dimple": "~2.1.2",
     "remodal": "~0.6.4",
-    "codemirror": "~5.2.0"
+    "codemirror": "~5.2.0",
+    "materialize": "~0.96.1"
   }
 }

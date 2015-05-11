@@ -1,6 +1,6 @@
 /* CSS adopted from Calendario style http://tympanus.net/codrops/2012/11/27/calendario-a-flexible-calendar-plugin/ */
 
-.grid-container {
+.grid-base {
 	height: 80%;
 	height: calc(100% - 4.5em);
 	margin-top: 2em;

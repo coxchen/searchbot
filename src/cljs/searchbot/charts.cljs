@@ -127,7 +127,22 @@
                                               (om/update! cursor :div {:width width :height height})))))
   (render [_]
           (let [{:keys [width height]} (:div cursor)]
-            (html [:div {:id id :width width :height height}])))
+            (html [:.card
+                   [:.card-content
+                    [:span.card-title
+                     [:a.btn-floating.btn-flat.white.waves-effect.waves-red.activator.right
+                      [:i.mdi-action-settings.grey-text]]]
+                    [:div {:id id :width width :height height}]
+                    ]
+                   [:.card-reveal
+                    [:span.card-title.grey-text.text-darken-4
+                     (:agg-key opts)
+                     [:i.mdi-navigation-close.right]
+                     [:pre {:style {:font-size "8pt"}}
+                      [:code.json (.stringify js/JSON (clj->js opts) nil 4)]
+                      ]
+                     ]]
+                   ])))
   (did-mount [_]
              (do-chart cursor opts))
   (did-update [_ _ _]

@@ -88,7 +88,7 @@
                   [:div
                    (om/build header app)
                    (om/build aggregators app)
-                   [:.row [:.col-lg-4 (om/build agg-summary app)]]
+                   [:.row (om/build agg-summary app)]
                    (om/build widgets app)])))
 
 (defn main []

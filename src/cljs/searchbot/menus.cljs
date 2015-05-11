@@ -17,20 +17,24 @@
   (let [names (class-names elem)]
     (aset elem "className" (clojure.string/join " " (disj names a-class-name)))))
 
+(defn- elem
+  ([] js/document.body)
+  ([id] (.getElementById js/document id)))
+
 (defn- toggle-sub-menu
   [app]
   (let [sub-open? (get-in @app [:menu :sub-open?])]
     (if sub-open?
-      (remove-class! js/document.body "show-submenu")
-      (add-class! js/document.body "show-submenu"))
+      (remove-class! (elem "off-canvas") "show-submenu")
+      (add-class! (elem "off-canvas") "show-submenu"))
     (om/update! app [:menu :sub-open?] (not sub-open?))))
 
 (defn- toggle-top-menu
   [app]
   (let [top-open? (get-in @app [:menu :top-open?])]
     (if top-open?
-      (remove-class! js/document.body "show-menu")
-      (add-class! js/document.body "show-menu"))
+      (remove-class! (elem "off-canvas") "show-menu")
+      (add-class! (elem "off-canvas") "show-menu"))
     (om/update! app [:menu :top-open?] (not top-open?))))
 
 (defn within? [elem-id]
@@ -52,21 +56,23 @@
                                       (if close-top? (toggle-top-menu app))
                                       (if close-sub? (toggle-sub-menu app))))))
   (render [_]
-          (html [:div.container
+          (html [:div#off-canvas.base
                  [:div#top-menu.menu-wrap {:data-level "1" }
-                  [:nav.menu
+;;                   [:nav.menu
                    [:h2 (-> opts :top-menu :header)]
-                   (om/build (-> opts :top-menu :content) app)]]
+                   (om/build (-> opts :top-menu :content) app)
+;;                    ]
+                  ]
                  [:div#sub-menu.menu-wrap {:data-level "2" }
                   [:nav.menu
                    [:h2 (-> opts :sub-menu :header)]
                    (om/build (-> opts :sub-menu :content) app)]]
-                 [:button#open-button.menu-button {:on-click #(toggle-top-menu app)}
+                 [:button.menu-button {:on-click #(toggle-top-menu app)}
                   [:i.fa.fa-fw.fa-cogs]
                   [:span "Open Menu"]]
                  [:div.content-wrap
                   [:div.content
-                   [:div.container-fluid {:style {:max-width "90%" :padding-left 10}}
+                   [:div {:style {:max-width "90%" :padding-left "100px" :padding-top "20px"}}
                     (om/build (:content opts) app)]]]])))
 
 ;;;;;;;;;;;;;;;;
@@ -82,7 +88,7 @@
 
 (defcomponent widgets-grid [app owner opts]
   (render [_]
-          (html [:div.grid-container
+          (html [:div.grid-base.grey.lighten-5
                  [:div.grid-content.grid-five-rows
                   [:div.grid-head
                    [:div "COL 1"]

@@ -1,6 +1,6 @@
 (defproject searchbot "0.1.0-SNAPSHOT"
   :description "Searchbot for ES"
-  :url "http://example.com/FIXME"
+  :url "http://github.com/coxchen/searchbot"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 

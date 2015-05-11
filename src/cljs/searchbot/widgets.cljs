@@ -44,27 +44,41 @@
                       (om/update! app [:es-count] docCount))
                     (<! (timeout poll-interval)))))
   (render [_]
-          (html [:h2 (:header-text app) " with " (-> app :es-count str commify) " raw data in ES"])))
+          (html [:h3 (:header-text app) " with " (-> app :es-count str commify) " raw data in ES"])))
 
 (defcomponent agg-summary [app owner opts]
-  (render [this] (html [:table.table.table-hover.table-condensed
-                        [:thead
-                         [:tr
-                          [:th {:align "right"} "Aggregation"]
-                          [:th {:align "right"} "Records aggregated"]
-                          [:th {:align "right"} "Time (ms)"]]]
-                        [:tbody
-                         (for [aggKey (filter #(not= :div %) (-> app :agg keys))]
-                           [:tr
-                            [:td [:span (name aggKey)]]
-                            [:td (-> app :agg aggKey :hits :total str commify)]
-                            [:td (-> app :agg aggKey :took str commify)]])]])))
+  (render [this] (html [:.col.s4
+                        [:.card.blue-grey.darken-1
+                         [:.card-content.amber-text.text-accent-4
+                          [:table.responsive-table.hoverable.bordered ;.table.table-hover.table-condensed
+                           [:thead
+                            [:tr
+                             [:th {:align "right"} "Aggregation"]
+                             [:th {:align "right"} "Records aggregated"]
+                             [:th {:align "right"} "Time (ms)"]]]
+                           [:tbody
+                            (for [aggKey (filter #(not= :div %) (-> app :agg keys))]
+                              [:tr
+                               [:td [:span (name aggKey)]]
+                               [:td (-> app :agg aggKey :hits :total str commify)]
+                               [:td (-> app :agg aggKey :took str commify)]])]]]]])))
+
+(defcomponent detail [app owner opts]
+  (render [_]
+          (html
+           ;[:pre.flow-text (.stringify js/JSON (clj->js opts) nil 4)]
+           [:pre {:style {:font-size "8pt"}}
+            [:code.json (.stringify js/JSON (clj->js opts) nil 4)]]
+           ))
+  )
 
 (defcomponent agg-table [app owner opts]
-  (render [this] (html [:.panel.panel-info
-                        [:.panel-heading (-> opts :agg-key name)]
-                        [:.panel-body
-                         [:table.table.table-hover.table-condensed
+  (render [this] (html [:.card.blue-grey.darken-1
+                        [:.card-content.activator.waves-effect.waves-block.waves-light.amber-text.text-accent-4
+                         [:span.card-title (-> opts :agg-key name)
+                          [:a.btn-floating.btn-flat.waves-effect.waves-light.activator.right
+                           [:i.mdi-action-settings.right]]]
+                         [:table.responsive-table.hoverable.bordered ;.table.table-hover.table-condensed
                           [:thead
                            [:tr
                             (for [col (:header opts)]
@@ -76,7 +90,13 @@
                                [:tr
                                 [:td (->> opts :header first :agg keyword (get x))]
                                 (for [d (->> opts :header rest)]
-                                  [:td (-> x (get-in [(keyword (:agg d)) :value]) str commify)])]))]]]])))
+                                  [:td (-> x (get-in [(keyword (:agg d)) :value]) str commify)])]))]]]
+                        [:.card-reveal
+                         [:span.card-title.grey-text.text-darken-4
+                          (:agg-key opts)
+                          [:i.mdi-navigation-close.right]
+                          (om/build detail app {:opts opts})
+                         ]]])))
 
 (defcomponent aggregator [app owner opts]
   (will-mount [_]
@@ -126,15 +146,17 @@
 (defn- col-class
   [count-per-row]
   (case count-per-row
-    1 :.col-lg-12
-    2 :.col-lg-6
-    3 :.col-lg-4
-    4 :.col-lg-3
-    :.col-lg-3))
+    1 "s12"
+    2 "s6"
+    3 "s4"
+    4 "s3"
+    "s3"))
 
 (defn- build-row [app row]
   [:.row (for [widget row]
-           [(col-class (count row)) (build-component app widget)])])
+           [:div {:class (str "col " (col-class (count row)))}
+            (build-component app widget)]
+           )])
 
 (defcomponent widgets [app owner opts]
 ;;   (will-mount [_]

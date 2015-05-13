@@ -129,7 +129,8 @@
           (let [{:keys [width height]} (:div cursor)]
             (html [:.card
                    [:.card-content
-                    [:span.card-title
+                    [:span.card-title.black-text
+                     (:agg-key opts)
                      [:a.btn-floating.btn-flat.white.waves-effect.waves-red.activator.right
                       [:i.mdi-action-settings.grey-text]]]
                     [:div {:id id :width width :height height}]

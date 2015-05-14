@@ -1,8 +1,10 @@
 # searchbot
 
-Searchbot for ElasticSearch
+A data-driven prototyping engine for dashboards based on ElasticSearch
 
 ![app](doc/app.png)
+
+## Dashboard Definition
 
 ![app definition](doc/app_def.png)
 
@@ -31,12 +33,6 @@ lein with-profile -dev,+production uberjar && foreman start
 Now your app is running at
 [http://localhost:5000](http://localhost:5000) in production mode.
 
-## License
-
-Copyright © 2015 FIXME
-
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
 
 ## Chestnut
 

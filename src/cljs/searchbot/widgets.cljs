@@ -5,13 +5,14 @@
             [sablono.core :as html :refer-macros [html]]
             [cljs-http.client :as http]
             [cljs.core.async :refer [put! <! >! chan timeout]]
-            [searchbot.charts :refer [es-chart]]))
+            [searchbot.charts :refer [es-chart]]
+            ))
 
 
 (defn es-url [purpose]
   (case purpose
-    :count "/es/avc_1d/avc/_count"
-    :agg "/es/avc_1d/avc/_search"
+    :count "/es/stats_avc_30d/avc/_count"
+    :agg "/es/stats_avc_1d/avc/_search"
     "/es"))
 
 (def poll-interval 30000)
@@ -31,9 +32,13 @@
           (>! c docCount)))
     c))
 
-(defn es-agg [post-body]
+(defn es-agg [url post-body]
   (let [c (chan)]
-    (go (let [{agg :body} (<! (http/post (es-url :agg) {:json-params post-body}))]
+    (go (let [{agg :body} (<! (http/post url {:json-params
+                                              (-> post-body
+                                                  (assoc :search_type "count")
+;;                                                   (assoc :preference "_primary")
+                                                  )}))]
           (>! c agg)))
     c))
 
@@ -66,7 +71,6 @@
 (defcomponent detail [app owner opts]
   (render [_]
           (html
-           ;[:pre.flow-text (.stringify js/JSON (clj->js opts) nil 4)]
            [:pre {:style {:font-size "8pt"}}
             [:code.json (.stringify js/JSON (clj->js opts) nil 4)]]
            ))
@@ -95,18 +99,34 @@
                          [:span.card-title.grey-text.text-darken-4
                           (:agg-key opts)
                           [:i.mdi-navigation-close.right]
-                          (om/build detail app {:opts opts})
+                          [:ul.collapsible.popout {:data-collapsible "accordion"}
+                           [:li
+                            [:div.collapsible-header [:i.fa.fa-trello] "Spec"]
+                            [:div.collapsible-body
+                             (om/build detail app {:opts opts})
+                             ]]
+                           [:li
+                            [:div.collapsible-header [:i.fa.fa-list-ol] "Data"]
+                            [:div.collapsible-body
+                             (let [agg-key (-> opts :agg-key keyword)
+                                   agg-top (-> opts :agg-top keyword)
+                                   table-data (-> app :agg (get agg-key) :aggregations agg-top)]
+;;                                (.log js/console (pr-str table-data))
+                               (om/build detail app {:opts table-data}))
+                             ]]
+                           ]
                          ]]])))
 
 (defcomponent aggregator [app owner opts]
   (will-mount [_]
               (go (while true
                     (let [agg-key (-> opts :agg-key keyword)
-                          agg-resp (<! (es-agg (merge (:body opts)
+                          agg-resp (<! (es-agg (or (:url opts) (es-url :agg))
+                                               (merge (:body opts)
                                                        {:query
                                                         {:filtered
                                                          {:query {:match_all {}}
-                                                          :filter {:range {:timestamp {:gte "now-12h" :lte "now"}}}}}})))]
+                                                          :filter {:range {:_timestamp {:gte (or (:gte opts) "now-24h") :lte "now"}}}}}})))]
 ;;                       (.log js/console (pr-str agg-key))
 ;;                       (.log js/console (pr-str agg-resp))
                       (om/update! app [:agg agg-key] agg-resp))
@@ -135,6 +155,8 @@
   (case widget-type
     "es-chart" es-chart
     "agg-table" agg-table
+    "agg-summary" agg-summary
+    "header" header
     nil))
 
 (defn- build-component
@@ -166,6 +188,15 @@
 ;;                     (<! (timeout poll-interval)))))
   (render [_] (html [:div (for [row (:widgets app)] (build-row app row))])))
 
+
+
+;;;;;;;;;;;;;;;;
+
+(defn init-app-state
+  [state]
+  (go (let [from-server (<! (fetch-meta "/_init"))]
+        (om/update! state from-server)
+        )))
 
 ;;;;;;;;;;;;;;;;
 

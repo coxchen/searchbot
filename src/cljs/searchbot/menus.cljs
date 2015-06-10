@@ -83,8 +83,10 @@
   (case (:type widget)
     "es-chart" (case (:draw-fn widget)
                  "draw-line" "fa fa-fw fa-line-chart"
-                 "draw-ring" "fa fa-fw fa-pie-chart")
-    "agg-table" "fa fa-fw fa-table"))
+                 "draw-ring" "fa fa-fw fa-pie-chart"
+                 "draw-bar" "fa fa-fw fa-bar-chart")
+    "agg-table" "fa fa-fw fa-table"
+    "fa fa-fw fa-cubes"))
 
 (defcomponent widgets-grid [app owner opts]
   (render [_]
@@ -110,7 +112,7 @@
                  {:rows "20" :cols "60"
                   :value (.stringify js/JSON (clj->js (-> @app :menu :selected)) nil 4)}]))
   (did-update [_ _ _]
-              (let [cm (-> @app :menu :cm)]
+              (if-let [cm (-> @app :menu :cm)]
                 (.setValue cm (.stringify js/JSON (clj->js (-> @app :menu :selected)) nil 4))
                 ))
   (did-mount [_]

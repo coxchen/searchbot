@@ -33,11 +33,12 @@
   (let [{:keys [bounds plot
                 x-axis y-axis]}   chart
         dimple-chart              (->dimple div id bounds)
-        x                         (.addCategoryAxis dimple-chart "x" x-axis)
-        y                         (.addMeasureAxis dimple-chart "y" y-axis)
-        s                         (.addSeries dimple-chart nil (->plot plot) (clj->js [x y]))]
+        x                         (.addMeasureAxis dimple-chart "x" x-axis)
+        y                         (.addCategoryAxis dimple-chart "y" y-axis)
+        s                         (.addSeries dimple-chart y-axis (->plot plot) (clj->js [y x]))]
+    (.addOrderRule y x-axis)
     (aset s "data" (clj->js data))
-    (.addLegend dimple-chart "5%" "10%" "20%" "10%" "right")
+    (.addLegend dimple-chart "83%" "10%" "20%" "50%" "right")
     (.draw dimple-chart)))
 
 
@@ -117,6 +118,11 @@
           transed (do-trans (trans-fn draw-fn) flattened agg-view)]
       ((chart-fn draw-fn) transed (:div cursor) opts))))
 
+(defcomponent detail [app owner opts]
+  (render [_]
+          (html
+           [:pre {:style {:font-size "8pt"}}
+            [:code.json (.stringify js/JSON (clj->js opts) nil 4)]])))
 
 (defcomponent es-chart [cursor owner {:keys [id] :as opts}]
   (will-mount [_]
@@ -139,8 +145,22 @@
                     [:span.card-title.grey-text.text-darken-4
                      (:agg-key opts)
                      [:i.mdi-navigation-close.right]
-                     [:pre {:style {:font-size "8pt"}}
-                      [:code.json (.stringify js/JSON (clj->js opts) nil 4)]
+                     [:ul.collapsible.popout {:data-collapsible "accordion"}
+                      [:li
+                       [:div.collapsible-header [:i.fa.fa-trello] "Spec"]
+                       [:div.collapsible-body
+                        (om/build detail cursor {:opts opts})
+                        ]]
+                      [:li
+                       [:div.collapsible-header [:i.fa.fa-list-ol] "Data"]
+                       [:div.collapsible-body
+                        (let [agg-key (-> opts :agg-key keyword)
+                              agg-top (-> opts :agg-top keyword)
+                              chart-data (-> cursor (get agg-key) :aggregations agg-top)]
+;;                           (.log js/console (pr-str "----------"))
+;;                           (.log js/console (pr-str (keys cursor)))
+                          (om/build detail cursor {:opts chart-data}))
+                        ]]
                       ]
                      ]]
                    ])))

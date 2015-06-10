@@ -9,7 +9,6 @@
 
 (defn es-search
   [host idx idxType query]
-  (println "query")
-  (println query)
-  (let [conn (esr/connect host)]
-    (esd/search conn idx idxType query)))
+  (let [conn (esr/connect host)
+        resp (esd/search conn idx idxType query)]
+    resp))

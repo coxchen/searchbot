@@ -8,13 +8,6 @@
             [searchbot.charts :refer [es-chart]]
             ))
 
-
-(defn es-url [purpose]
-  (case purpose
-    :count "/es/stats_avc_30d/avc/_count"
-    :agg "/es/stats_avc_1d/avc/_search"
-    "/es"))
-
 (def poll-interval 30000)
 
 (defn commify [s]
@@ -26,28 +19,26 @@
         (recur (split-at 3 remainder) (concat result (list \,) group))))))
 
 
-(defn es-count []
+(defn es-count [api-url]
   (let [c (chan)]
-    (go (let [{{docCount :count} :body} (<! (http/get (es-url :count)))]
+    (go (let [{{docCount :count} :body} (<! (http/get api-url))]
           (>! c docCount)))
     c))
 
-(defn es-agg [url post-body]
+(defn es-agg [api-url post-body]
   (let [c (chan)]
-    (go (let [{agg :body} (<! (http/post url {:json-params
-                                              (-> post-body
-                                                  (assoc :search_type "count")
-;;                                                   (assoc :preference "_primary")
-                                                  )}))]
+    (go (let [{agg :body} (<! (http/post api-url
+                                         {:json-params
+                                          (-> post-body (assoc :search_type "count"))}))]
           (>! c agg)))
     c))
 
 (defcomponent header [app owner opts]
   (will-mount [_]
               (go (while true
-                    (let [docCount (<! (es-count))]
+                    (let [docCount (<! (es-count (-> app :es-api :count)))]
                       (om/update! app [:es-count] docCount))
-                    (<! (timeout poll-interval)))))
+                    (<! (timeout (or (-> app :poll-interval) poll-interval))))))
   (render [_]
           (html [:h3 (:header-text app) " with " (-> app :es-count str commify) " raw data in ES"])))
 
@@ -72,9 +63,7 @@
   (render [_]
           (html
            [:pre {:style {:font-size "8pt"}}
-            [:code.json (.stringify js/JSON (clj->js opts) nil 4)]]
-           ))
-  )
+            [:code.json (.stringify js/JSON (clj->js opts) nil 4)]])))
 
 (defcomponent agg-table [app owner opts]
   (render [this] (html [:.card.blue-grey.darken-1
@@ -121,7 +110,7 @@
   (will-mount [_]
               (go (while true
                     (let [agg-key (-> opts :agg-key keyword)
-                          agg-resp (<! (es-agg (or (:url opts) (es-url :agg))
+                          agg-resp (<! (es-agg (or (:url opts) (-> app :es-api :agg))
                                                (merge (:body opts)
                                                        {:query
                                                         {:filtered
@@ -130,25 +119,15 @@
 ;;                       (.log js/console (pr-str agg-key))
 ;;                       (.log js/console (pr-str agg-resp))
                       (om/update! app [:agg agg-key] agg-resp))
-                    (<! (timeout poll-interval)))))
+                    (<! (timeout (or (-> app :poll-interval) poll-interval))))))
   (render [_] (html [:.hide "Aggregator:" (-> opts :agg-key)])))
 
 ;;;;;;;;;;;;;;;;;;
 ;; meta components
 
-(defn fetch-meta [url]
-  (let [c (chan)]
-    (go (let [{body :body} (<! (http/get url))]
-          (>! c body)))
-    c))
-
 (defcomponent aggregators [app owner opts]
-;;   (will-mount [_]
-;;               (go (while true
-;;                     (let [{_aggs :aggregators} (<! (fetch-meta "/_aggregators"))]
-;;                       (om/update! app [:aggregators] _aggs))
-;;                     (<! (timeout poll-interval)))))
-  (render [_] (html [:div (for [agg (:aggregators app)] (om/build aggregator app {:opts agg}))])))
+  (render [_] (html [:div (for [agg (:aggregators app)]
+                            (om/build aggregator app {:opts agg}))])))
 
 (defn- get-component
   [widget-type]
@@ -181,16 +160,17 @@
            )])
 
 (defcomponent widgets [app owner opts]
-;;   (will-mount [_]
-;;               (go (while true
-;;                     (let [{_widgets :widgets} (<! (fetch-meta "/_widgets"))]
-;;                       (om/update! app [:widgets] _widgets))
-;;                     (<! (timeout poll-interval)))))
   (render [_] (html [:div (for [row (:widgets app)] (build-row app row))])))
 
 
 
 ;;;;;;;;;;;;;;;;
+
+(defn fetch-meta [url]
+  (let [c (chan)]
+    (go (let [{body :body} (<! (http/get url))]
+          (>! c body)))
+    c))
 
 (defn init-app-state
   [state]

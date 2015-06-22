@@ -92,7 +92,7 @@
                         [:tbody
                          (let [agg-key (-> opts :agg-key keyword)
                                agg-top (-> opts :agg-top keyword)]
-                           (for [x (-> cursor :agg (get agg-key) :aggregations agg-top :buckets)]
+                           (for [x (-> cursor (get agg-key) :aggregations agg-top :buckets)]
                              [:tr
                               [:td (->> opts :header first :agg keyword (get x))]
                               (for [d (->> opts :header rest)]
@@ -117,7 +117,7 @@
                         [:.card-reveal
                          [:span.card-title.grey-text.text-darken-4 (:agg-key opts)
                           [:i.mdi-navigation-close.right]
-                          [:ul.collapsible.popout {:data-collapsible "accordion"}
+                          [:ul.collapsible {:data-collapsible "accordion"}
                            [:li
                             [:div.collapsible-header [:i.fa.fa-trello] "Spec"]
                             [:div.collapsible-body (om/build detail cursor {:opts opts})]]
@@ -126,7 +126,7 @@
                             [:div.collapsible-body
                              (let [agg-key (-> opts :agg-key keyword)
                                    agg-top (-> opts :agg-top keyword)
-                                   widget-data (-> cursor :agg (get agg-key) :aggregations agg-top)]
+                                   widget-data (-> cursor (get agg-key) :aggregations agg-top)]
                                (om/build detail cursor {:opts widget-data}))]]]]]])))
 
 (defn- widget-theme

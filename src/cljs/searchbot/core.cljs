@@ -17,7 +17,10 @@
               (init-app-state app))
   (render [_] (html [:div
                      (om/build aggregators app)
-                     (om/build widgets app)])))
+                     (om/build widgets app)]))
+  (did-update [_ _ _]
+              (-> (js/$ ".collapsible") (.collapsible (clj->js {:accordion false})))
+              (-> (js/$ "pre code") (.each (fn [i block] (js/hljs.highlightBlock block))))))
 
 (defn main []
 ;;   (om/root my-app app-state {:target js/document.body})

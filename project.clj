@@ -80,4 +80,5 @@
                                             {:source-paths ["env/prod/cljs"]
                                              :compiler
                                              {:optimizations :advanced
-                                              :pretty-print false}}}}}})
+                                              :pretty-print false}}}}}}
+  :main searchbot.server)

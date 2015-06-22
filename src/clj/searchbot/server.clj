@@ -24,10 +24,17 @@
     (slurp ednfile)
     default))
 
-;; (def ^:private es-host (atom (str "http://127.0.0.1:9200")))
 (def ^:private es-host
-  (atom (str "http://" (or (:es-host (clojure.edn/read-string (read-edn "server.edn")))
-                           "127.0.0.1") ":9200")))
+  (atom {:host "127.0.0.1" :port "9200"}))
+
+(defn get-es-host
+  []
+  (str "http://"
+       (or (get-in (clojure.edn/read-string (read-edn "server.edn")) [:es :host])
+           (:host @es-host))
+       ":"
+       (or (get-in (clojure.edn/read-string (read-edn "server.edn")) [:es :port])
+           (:port @es-host))))
 
 (deftemplate init-page (io/resource "index.html") []
   [:body] (if is-dev? inject-devmode-html identity))
@@ -46,9 +53,9 @@
   (GET "/_init" req (response (clojure.edn/read-string
                                (read-edn "app-state.edn" :default (pr-str default-app-state)))))
   (GET "/es/:idx/:idxType/_count" [idx idxType]
-       (response (es/es-count @es-host idx idxType)))
+       (response (es/es-count (get-es-host) idx idxType)))
   (POST "/es/:idx/:idxType/_search" [idx idxType :as req]
-        (response (es/es-search @es-host idx idxType (:body req))))
+        (response (es/es-search (get-es-host) idx idxType (:body req))))
   (resources "/")
   (not-found "Not Found"))
 
@@ -69,21 +76,20 @@
 ;;     (wrap-defaults routes api-defaults)))
     (wrap-routes)))
 
-(defn run-web-server [& {:keys [port host]}]
+(defn run-web-server [& {:keys [port]}]
   (let [port (Integer. (or port (env :port) 10555))]
-    (if host (reset! es-host (str "http://" host ":9200")))
     (print "# Starting web server on port" port "\n")
-    (print "# Requests will be redirect to ES on" @es-host "\n")
+    (print "# Requests will be redirect to ES on" (get-es-host) "\n")
     (run-server http-handler {:port port :join? false})))
 
 (defn run-auto-reload []
   (auto-reload *ns*)
   (start-figwheel))
 
-(defn run [& {:keys [port host]}]
+(defn run [& {:keys [port]}]
   (when is-dev?
     (run-auto-reload))
-  (run-web-server :port port :host host))
+  (run-web-server :port port))
 
 (defn -main [& [port]]
   (run :port port))

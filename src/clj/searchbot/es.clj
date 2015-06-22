@@ -11,4 +11,5 @@
   [host idx idxType query]
   (let [conn (esr/connect host)
         resp (esd/search conn idx idxType query)]
+    (println "[resp]" (-> resp :aggregations keys first) "took" (:took resp) "ms")
     resp))

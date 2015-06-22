@@ -29,7 +29,10 @@
   (let [c (chan)]
     (go (let [{agg :body} (<! (http/post api-url
                                          {:json-params
-                                          (-> post-body (assoc :search_type "count"))}))]
+                                          (-> post-body
+                                              (assoc :search_type "count")
+                                              (assoc :preference "_local")
+                                              )}))]
           (>! c agg)))
     c))
 
@@ -46,7 +49,7 @@
   (render [this] (html [:.col.s4
                         [:.card.blue-grey.darken-1
                          [:.card-content.amber-text.text-accent-4
-                          [:table.responsive-table.hoverable.bordered ;.table.table-hover.table-condensed
+                          [:table.responsive-table.hoverable.bordered
                            [:thead
                             [:tr
                              [:th {:align "right"} "Aggregation"]
@@ -59,53 +62,6 @@
                                [:td (-> app :agg aggKey :hits :total str commify)]
                                [:td (-> app :agg aggKey :took str commify)]])]]]]])))
 
-(defcomponent detail [app owner opts]
-  (render [_]
-          (html
-           [:pre {:style {:font-size "8pt"}}
-            [:code.json (.stringify js/JSON (clj->js opts) nil 4)]])))
-
-(defcomponent agg-table [app owner opts]
-  (render [this] (html [:.card.blue-grey.darken-1
-                        [:.card-content.activator.waves-effect.waves-block.waves-light.amber-text.text-accent-4
-                         [:span.card-title (-> opts :agg-key name)
-                          [:a.btn-floating.btn-flat.waves-effect.waves-light.activator.right
-                           [:i.mdi-action-settings.right]]]
-                         [:table.responsive-table.hoverable.bordered ;.table.table-hover.table-condensed
-                          [:thead
-                           [:tr
-                            (for [col (:header opts)]
-                              [:th (:label col)])]]
-                          [:tbody
-                           (let [agg-key (-> opts :agg-key keyword)
-                                 agg-top (-> opts :agg-top keyword)]
-                             (for [x (-> app :agg (get agg-key) :aggregations agg-top :buckets)]
-                               [:tr
-                                [:td (->> opts :header first :agg keyword (get x))]
-                                (for [d (->> opts :header rest)]
-                                  [:td (-> x (get-in [(keyword (:agg d)) :value]) str commify)])]))]]]
-                        [:.card-reveal
-                         [:span.card-title.grey-text.text-darken-4
-                          (:agg-key opts)
-                          [:i.mdi-navigation-close.right]
-                          [:ul.collapsible.popout {:data-collapsible "accordion"}
-                           [:li
-                            [:div.collapsible-header [:i.fa.fa-trello] "Spec"]
-                            [:div.collapsible-body
-                             (om/build detail app {:opts opts})
-                             ]]
-                           [:li
-                            [:div.collapsible-header [:i.fa.fa-list-ol] "Data"]
-                            [:div.collapsible-body
-                             (let [agg-key (-> opts :agg-key keyword)
-                                   agg-top (-> opts :agg-top keyword)
-                                   table-data (-> app :agg (get agg-key) :aggregations agg-top)]
-;;                                (.log js/console (pr-str table-data))
-                               (om/build detail app {:opts table-data}))
-                             ]]
-                           ]
-                         ]]])))
-
 (defcomponent aggregator [app owner opts]
   (will-mount [_]
               (go (while true
@@ -115,34 +71,94 @@
                                                        {:query
                                                         {:filtered
                                                          {:query {:match_all {}}
-                                                          :filter {:range {:_timestamp {:gte (or (:gte opts) "now-24h") :lte "now"}}}}}})))]
+                                                          :filter {:range
+                                                                   {:_timestamp {:gte (or (:gte opts) "now-24h") :lte "now"}}}}}})))]
 ;;                       (.log js/console (pr-str agg-key))
 ;;                       (.log js/console (pr-str agg-resp))
                       (om/update! app [:agg agg-key] agg-resp))
                     (<! (timeout (or (-> app :poll-interval) poll-interval))))))
   (render [_] (html [:.hide "Aggregator:" (-> opts :agg-key)])))
 
-;;;;;;;;;;;;;;;;;;
-;; meta components
-
 (defcomponent aggregators [app owner opts]
   (render [_] (html [:div (for [agg (:aggregators app)]
                             (om/build aggregator app {:opts agg}))])))
 
+(defcomponent agg-table [cursor owner opts]
+  (render [this] (html [:table.responsive-table.hoverable.bordered
+                        [:thead
+                         [:tr
+                          (for [col (:header opts)]
+                            [:th (:label col)])]]
+                        [:tbody
+                         (let [agg-key (-> opts :agg-key keyword)
+                               agg-top (-> opts :agg-top keyword)]
+                           (for [x (-> cursor :agg (get agg-key) :aggregations agg-top :buckets)]
+                             [:tr
+                              [:td (->> opts :header first :agg keyword (get x))]
+                              (for [d (->> opts :header rest)]
+                                [:td (-> x (get-in [(keyword (:agg d)) :value]) str commify)])]))]])))
+
+;;;;;;;;;;;;;;;;;;
+;; meta components
+
+(defcomponent detail [app owner opts]
+  (render [_]
+          (html
+           [:pre {:style {:font-size "8pt"}}
+            [:code.json (.stringify js/JSON (clj->js opts) nil 4)]])))
+
+(defcomponent widget-wrapper [cursor owner opts]
+  (render [this] (html [:.card {:class (-> opts :_theme :card)}
+                        [:.card-content {:class (-> opts :_theme :card-content)}
+                         [:span.card-title {:class (-> opts :_theme :card-title)} (-> opts :agg-key name)
+                          [:a.btn-floating.btn-flat.waves-effect.activator.right {:class (-> opts :_theme :activator)}
+                           [:i.mdi-action-settings {:class (-> opts :_theme :activator-icon)}]]]
+                         (om/build (-> opts :_widget) cursor {:opts opts})]
+                        [:.card-reveal
+                         [:span.card-title.grey-text.text-darken-4 (:agg-key opts)
+                          [:i.mdi-navigation-close.right]
+                          [:ul.collapsible.popout {:data-collapsible "accordion"}
+                           [:li
+                            [:div.collapsible-header [:i.fa.fa-trello] "Spec"]
+                            [:div.collapsible-body (om/build detail cursor {:opts opts})]]
+                           [:li
+                            [:div.collapsible-header [:i.fa.fa-list-ol] "Data"]
+                            [:div.collapsible-body
+                             (let [agg-key (-> opts :agg-key keyword)
+                                   agg-top (-> opts :agg-top keyword)
+                                   widget-data (-> cursor :agg (get agg-key) :aggregations agg-top)]
+                               (om/build detail cursor {:opts widget-data}))]]]]]])))
+
+(defn- widget-theme
+  [widget-type]
+  {:_theme
+   (case widget-type
+     "es-chart"  {:card-title "black-text"
+                  :activator "white"
+                  :activator-icon "grey-text"}
+     "agg-table" {:card "blue-grey darken-1"
+                  :card-content "amber-text text-accent-4"
+                  :activator "waves-light"}
+     {})})
+
 (defn- get-component
   [widget-type]
   (case widget-type
-    "es-chart" es-chart
-    "agg-table" agg-table
-    "agg-summary" agg-summary
-    "header" header
+    "es-chart" {:_widget es-chart :_wrapper widget-wrapper}
+    "agg-table" {:_widget agg-table :_wrapper widget-wrapper}
+    "agg-summary" {:_widget agg-summary}
+    "header" {:_widget header}
     nil))
 
 (defn- build-component
   [app widget]
   (let [component (get-component (:type widget))
-        cursor (-> widget :cursor keyword)]
-    (if component (om/build component (if cursor (get app cursor) app) {:opts widget}))))
+        cursor (-> widget :cursor keyword)
+        cursor-data (if cursor (get app cursor) app)]
+    (if component
+      (if (:_wrapper component)
+        (om/build widget-wrapper cursor-data {:opts (merge widget component (widget-theme (:type widget)))})
+        (om/build (:_widget component) cursor-data {:opts widget})))))
 
 (defn- col-class
   [count-per-row]
@@ -156,8 +172,7 @@
 (defn- build-row [app row]
   [:.row (for [widget row]
            [:div {:class (str "col " (col-class (count row)))}
-            (build-component app widget)]
-           )])
+            (build-component app widget)])])
 
 (defcomponent widgets [app owner opts]
   (render [_] (html [:div (for [row (:widgets app)] (build-row app row))])))
@@ -175,8 +190,7 @@
 (defn init-app-state
   [state]
   (go (let [from-server (<! (fetch-meta "/_init"))]
-        (om/update! state from-server)
-        )))
+        (om/update! state from-server))))
 
 ;;;;;;;;;;;;;;;;
 

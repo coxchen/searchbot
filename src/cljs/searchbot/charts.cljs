@@ -118,12 +118,6 @@
           transed (do-trans (trans-fn draw-fn) flattened agg-view)]
       ((chart-fn draw-fn) transed (:div cursor) opts))))
 
-(defcomponent detail [app owner opts]
-  (render [_]
-          (html
-           [:pre {:style {:font-size "8pt"}}
-            [:code.json (.stringify js/JSON (clj->js opts) nil 4)]])))
-
 (defcomponent es-chart [cursor owner {:keys [id] :as opts}]
   (will-mount [_]
               ;; Add event listener that will update width & height when window is resized
@@ -133,37 +127,7 @@
                                               (om/update! cursor :div {:width width :height height})))))
   (render [_]
           (let [{:keys [width height]} (:div cursor)]
-            (html [:.card
-                   [:.card-content
-                    [:span.card-title.black-text
-                     (:agg-key opts)
-                     [:a.btn-floating.btn-flat.white.waves-effect.waves-red.activator.right
-                      [:i.mdi-action-settings.grey-text]]]
-                    [:div {:id id :width width :height height}]
-                    ]
-                   [:.card-reveal
-                    [:span.card-title.grey-text.text-darken-4
-                     (:agg-key opts)
-                     [:i.mdi-navigation-close.right]
-                     [:ul.collapsible.popout {:data-collapsible "accordion"}
-                      [:li
-                       [:div.collapsible-header [:i.fa.fa-trello] "Spec"]
-                       [:div.collapsible-body
-                        (om/build detail cursor {:opts opts})
-                        ]]
-                      [:li
-                       [:div.collapsible-header [:i.fa.fa-list-ol] "Data"]
-                       [:div.collapsible-body
-                        (let [agg-key (-> opts :agg-key keyword)
-                              agg-top (-> opts :agg-top keyword)
-                              chart-data (-> cursor (get agg-key) :aggregations agg-top)]
-;;                           (.log js/console (pr-str "----------"))
-;;                           (.log js/console (pr-str (keys cursor)))
-                          (om/build detail cursor {:opts chart-data}))
-                        ]]
-                      ]
-                     ]]
-                   ])))
+            (html [:div {:id id :width width :height height}])))
   (did-mount [_]
              (do-chart cursor opts))
   (did-update [_ _ _]

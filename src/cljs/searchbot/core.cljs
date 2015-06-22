@@ -15,10 +15,9 @@
 (defcomponent my-app [app owner]
   (will-mount [_]
               (init-app-state app))
-  (render [_] (html
-                  [:div
-                   (om/build aggregators app)
-                   (om/build widgets app)])))
+  (render [_] (html [:div
+                     (om/build aggregators app)
+                     (om/build widgets app)])))
 
 (defn main []
 ;;   (om/root my-app app-state {:target js/document.body})

@@ -42,6 +42,7 @@
 (def default-app-state
   {:header-text "searchbot"
    :menu {:top-open? false :sub-open? false :selected {} :cm nil}
+   :nav [{:view "app-state" :label "Dashboard" :active true}]
    :es-count 0
    :agg {:div {:width "90%" :height 300}}
    :aggregators []
@@ -52,6 +53,8 @@
   (GET "/" req (apply str (init-page)))
   (GET "/_init" req (response (clojure.edn/read-string
                                (read-edn "app-state.edn" :default (pr-str default-app-state)))))
+  (GET "/_init/:view" [view] (response (clojure.edn/read-string
+                                        (read-edn (str view ".edn") :default (pr-str default-app-state)))))
   (GET "/es/:idx/:idxType/_count" [idx idxType]
        (response (es/es-count (get-es-host) idx idxType)))
   (POST "/es/:idx/:idxType/_search" [idx idxType :as req]

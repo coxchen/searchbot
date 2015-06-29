@@ -25,11 +25,7 @@
                      (om/build the-aggregator (:agg app))
                      (om/build widgets app)]))
   (did-update [_ _ _]
-              (.log js/console "# updating my-app")
-;;               (-> (js/$ ".collapsible") (.collapsible (clj->js {:accordion false})))
-;;               (-> (js/$ "pre code") (.each (fn [i block] (js/hljs.highlightBlock block))))
-              ))
-
+              (.log js/console "# updating my-app")))
 
 
 (defn main []

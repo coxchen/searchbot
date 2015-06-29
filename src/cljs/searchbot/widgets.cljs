@@ -5,52 +5,12 @@
             [sablono.core :as html :refer-macros [html]]
             [cljs-http.client :as http]
             [cljs.core.async :refer [put! <! >! chan timeout]]
+            [searchbot.meta :refer [widget-wrapper detail]]
             [searchbot.charts :refer [es-chart]]
+            [searchbot.search :refer [searchbox]]
             ))
 
 (def poll-interval 30000)
-
-;;;;;;;;;;;;;;;;;;
-;; meta components
-
-(defcomponent detail [app owner opts]
-  (render [_]
-          (html
-           [:pre {:style {:font-size "8pt"}}
-            [:code.json {:ref "detail"} (.stringify js/JSON (clj->js opts) nil 4)]]))
-  (did-update [_ _ _]
-              (.log js/console "# updating detail" (pr-str (keys opts)))
-              (.log js/console (om/get-node owner "detail"))
-              (-> (om/get-node owner "detail")
-                  (js/hljs.highlightBlock)))
-  )
-
-(defcomponent widget-wrapper [cursor owner opts]
-  (render [this] (html [:.card {:class (-> opts :_theme :card)}
-                        [:.card-content {:class (-> opts :_theme :card-content)}
-                         [:span.card-title {:class (-> opts :_theme :card-title)} (-> opts :agg-key name)
-                          [:a.btn-floating.btn-flat.waves-effect.activator.right {:class (-> opts :_theme :activator)}
-                           [:i.mdi-action-settings {:class (-> opts :_theme :activator-icon)}]]]
-                         (om/build (-> opts :_widget) cursor {:opts opts})]
-                        [:.card-reveal
-                         [:span.card-title.grey-text.text-darken-4 (:agg-key opts)
-                          [:i.mdi-navigation-close.right]
-                          [:ul.collapsible {:ref "wrapper-collapsible" :data-collapsible "accordion"}
-                           [:li
-                            [:div.collapsible-header [:i.fa.fa-trello] "Spec"]
-                            [:div.collapsible-body (om/build detail cursor {:opts opts})]]
-                           [:li
-                            [:div.collapsible-header [:i.fa.fa-list-ol] "Data"]
-                            [:div.collapsible-body
-                             (let [agg-key (-> opts :agg-key keyword)
-                                   agg-top (-> opts :agg-top keyword)
-                                   widget-data (-> cursor (get agg-key) :aggregations agg-top)]
-                               (om/build detail cursor {:opts widget-data}))]]]]]]))
-  (did-mount [_]
-             (-> (om/get-node owner "wrapper-collapsible")
-                 (js/$)
-                 (.collapsible (clj->js {:accordion false}))))
-  )
 
 ;;;;;;;;;;;;;;;;;;;;
 
@@ -150,100 +110,7 @@
                               (for [d (->> opts :header rest)]
                                 [:td (-> x (get-in [(keyword (:agg d)) :value]) str commify)])]))]])))
 
-;;;;;;;;;;;;;
-;; searchbox
 
-(defn es-query [api-url post-body]
-  (let [c (chan)]
-    (go (let [{resp :body} (<! (http/post api-url {:json-params (-> post-body)}))]
-          (>! c resp)))
-    c))
-
-(defn- update-searchbox
-  [owner inputValue]
-  (let [newQuery (if (> (count inputValue) 0)
-                   {:query {:query_string {:query inputValue}}}
-                   {:query {:match_all {}}})]
-    (om/set-state! owner :query newQuery)
-    (om/set-state! owner :query-string inputValue)))
-
-(defn- update-query-result
-  [owner result]
-  (om/set-state! owner :query-result result))
-
-(defcomponent searchbox [cursor owner opts]
-  (will-mount [_]
-              (update-searchbox owner "")
-              (update-query-result owner {}))
-  (render-state [_ {:keys [query query-string query-result]}]
-                (let [reference "query-string"]
-                  (html [:.card
-                         [:.card-content
-                          [:span.card-title.black-text "searching in "
-                           [:strong (str "/" (:es-index opts) "/" (:es-type opts))]
-                           [:a.btn-floating.btn-flat.waves-effect.activator.white.right
-                            [:i.mdi-action-settings.grey-text]]]
-                          [:.input-field
-                           [:i.prefix.fa.fa-search]
-                           [:input {:id (:id opts)
-                                    :ref (:id opts)
-                                    :value query-string
-                                    :type "text"
-                                    :on-change (fn [x]
-                                                 (let [thisNode (om/get-node owner (:id opts))
-                                                       inputValue (.-value thisNode)]
-                                                   (update-searchbox owner inputValue)))
-                                    :on-key-down (fn [e]
-                                                   (let [keyCode (-> e .-keyCode)]
-                                                     (case keyCode
-                                                       27 (do ;; ESC
-                                                            (update-searchbox owner "")
-                                                            (update-query-result owner {}))
-                                                       13 (go ;; ENTER
-                                                           (let [resp (<! (es-query (str "/es/"
-                                                                                         (:es-index opts) "/"
-                                                                                         (:es-type opts) "/_search")
-                                                                                    query))]
-                                                             (update-query-result owner resp)))
-                                                       nil)))}]
-                           [:label {:for (:id opts)} "Query String"]]
-                          [:div "query"
-                           [:pre {:style {:font-size "8pt"}}
-                            [:code.json {:ref "current-query-string"} (.stringify js/JSON (clj->js query) nil 4)]]]
-                          [:div (str "resp: " (or (count (get-in query-result [:hits :hits])) 0) "/"
-                                     (or (get-in query-result [:hits :total]) 0) " hits")
-                           [:table.responsive-table.hoverable.bordered
-                            [:thead
-                             [:tr
-                              (for [col (:header opts)]
-                                [:th (:label col)])]]
-                            [:tbody
-                             (let [hits (get-in query-result [:hits :hits])]
-                               (for [hit hits]
-                                 [:tr
-                                  (for [col (:header opts)]
-                                    [:td (-> hit :_source (get (-> col :field keyword)))])]))]]]]
-                         [:.card-reveal
-                          [:span.card-title.grey-text.text-darken-4 "metadata"
-                           [:i.mdi-navigation-close.right]
-                           [:ul.collapsible {:data-collapsible "accordion"}
-                            [:li
-                             [:div.collapsible-header [:i.fa.fa-trello] "Spec"]
-                             [:div.collapsible-body (om/build detail cursor {:opts opts})]]
-                            [:li
-                             [:div.collapsible-header [:i.fa.fa-list-ol] "Response"]
-                             [:div.collapsible-body
-                              [:pre {:style {:font-size "8pt"}}
-                               [:code.json {:ref "query-result"} (.stringify js/JSON (clj->js query-result) nil 4)]]
-                              ]]]]]
-                         ])))
-  (did-update [_ _ _]
-              (let [input (om/get-node owner "current-query-string")
-                    result (om/get-node owner "query-result")]
-                (.log js/console "highlight!")
-                (js/hljs.highlightBlock input)
-                (js/hljs.highlightBlock result)
-                )))
 
 ;;;;;;;;;;;;;;;;;;;;
 
@@ -257,7 +124,9 @@
      "agg-table" {:card "blue-grey darken-1"
                   :card-content "amber-text text-accent-4"
                   :activator "waves-light"}
-     {})})
+     {:card-title "black-text"
+      :activator "white"
+      :activator-icon "grey-text"})})
 
 (defn- get-component
   [widget-type]

@@ -101,7 +101,7 @@ if [ "$1" = "self-install" ]; then
     echo "Downloading searchbot now..."
     SEARCHBOT_DIR=`dirname "$SEARCHBOT_JAR"`
     mkdir -p "$SEARCHBOT_DIR"
-    SEARCHBOT_URL="https://github.com/coxchen/searchbot/raw/master/downloads/searchbot-$SEARCHBOT_VERSION-standalone.jar"
+    SEARCHBOT_URL="https://github.com/coxchen/searchbot/releases/download/v$SEARCHBOT_VERSION/searchbot-$SEARCHBOT_VERSION-standalone.jar"
     $HTTP_CLIENT "$SEARCHBOT_JAR" "$SEARCHBOT_URL"
     if [ $? != 0 ]; then
         echo "Failed to download $SEARCHBOT_URL"

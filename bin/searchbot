@@ -172,7 +172,7 @@ else
         -Dmaven.wagon.http.ssl.easy=false \
         -Dsearchbot.original.pwd="$ORIGINAL_PWD" \
         -cp "$CLASSPATH" \
-        clojure.main -m searchbot.main "$@"
+        clojure.main -m searchbot.server "$@"
 
     EXIT_CODE=$?
 

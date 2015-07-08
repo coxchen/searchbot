@@ -1,4 +1,4 @@
-(defproject searchbot "0.1.0-SNAPSHOT"
+(defproject searchbot "0.2.0"
   :description "Searchbot for ES"
   :url "http://github.com/coxchen/searchbot"
   :license {:name "Eclipse Public License"
@@ -31,8 +31,6 @@
             [lein-environ "1.0.0"]]
 
   :min-lein-version "2.5.0"
-
-  :uberjar-name "searchbot.jar"
 
   :cljsbuild {:builds {:app {:source-paths ["src/cljs"]
                              :compiler {:output-to     "resources/public/js/app.js"
@@ -79,6 +77,7 @@
                        :cljsbuild {:builds {:app
                                             {:source-paths ["env/prod/cljs"]
                                              :compiler
-                                             {:optimizations :advanced
-                                              :pretty-print false}}}}}}
+                                             {:optimizations :whitespace ;:advanced
+                                              :pretty-print true ;false
+                                              }}}}}}
   :main searchbot.server)

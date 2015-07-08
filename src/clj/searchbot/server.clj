@@ -1,5 +1,6 @@
 (ns searchbot.server
   (:require [clojure.java.io :as io]
+            [clojure.edn]
             [searchbot.dev :refer [is-dev? inject-devmode-html browser-repl start-figwheel]]
             [compojure.core :refer [GET POST defroutes]]
             [compojure.route :refer [resources not-found]]
@@ -12,7 +13,8 @@
             [ring.util.json-response :as jresp]
             [environ.core :refer [env]]
             [org.httpkit.server :refer [run-server]]
-            [searchbot.es :as es]))
+            [searchbot.es :as es])
+  (:gen-class))
 
 (defn- has-file?
   [filename]

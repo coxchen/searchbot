@@ -5,7 +5,8 @@
             [sablono.core :as html :refer-macros [html]]
             [cljs-http.client :as http]
             [cljs.core.async :refer [<! >! chan]]
-            [searchbot.meta :refer [widget-wrapper detail]]))
+            [searchbot.meta :refer [widget-wrapper detail]]
+            [clojure.string :as string]))
 
 ;;;;;;;;;;;;;
 ;; searchbox
@@ -28,6 +29,9 @@
   [owner result]
   (om/set-state! owner :query-result result))
 
+(defn- join-str [& tokens]
+  (->> tokens (filter (comp not string/blank?)) (string/join "/") (str "/")))
+
 (defcomponent searchbox [cursor owner opts]
   (will-mount [_]
               (update-searchbox owner "")
@@ -37,7 +41,7 @@
                   (html [:.card
                          [:.card-content
                           [:span.card-title.black-text "searching in "
-                           [:strong (str "/" (:es-index opts) "/" (:es-type opts))]
+                           [:strong (join-str (:es-index opts) (:es-type opts))]
                            [:a.btn-floating.btn-flat.waves-effect.activator.white.right
                             [:i.mdi-action-settings.grey-text]]]
                           [:.input-field
@@ -57,13 +61,12 @@
                                                             (update-searchbox owner "")
                                                             (update-query-result owner {}))
                                                        13 (go ;; ENTER
-                                                           (let [resp (<! (es-query (str "/es/"
-                                                                                         (:es-index opts) "/"
-                                                                                         (:es-type opts) "/_search")
-                                                                                    query))]
+                                                           (let [resp (<! (es-query
+                                                                           (join-str "es" (:es-index opts) (:es-type opts) "_search")
+                                                                           query))]
                                                              (update-query-result owner resp)))
                                                        nil)))}]
-                           [:label {:for (:id opts)} "available fields: " (interpose ", " (map :field (:header opts)))]]
+                           [:label {:for (:id opts)} "query string"]]
                           [:div "query"
                            [:pre {:style {:font-size "8pt"}}
                             [:code.json {:ref "current-query-string"} (.stringify js/JSON (clj->js query) nil 4)]]]
@@ -73,13 +76,13 @@
                             [:thead
                              [:tr
                               (for [col (:header opts)]
-                                [:th (:label col) (str " (" (:field col) ")")])]]
+                                [:th (:label col) (str " (" (string/join "/" (:field col))")")])]]
                             [:tbody
                              (let [hits (get-in query-result [:hits :hits])]
                                (for [hit hits]
                                  [:tr
                                   (for [col (:header opts)]
-                                    [:td (-> hit :_source (get (-> col :field keyword)))])]))]]]]
+                                    [:td (get-in hit (map keyword (:field col)))])]))]]]]
                          [:.card-reveal
                           [:span.card-title.grey-text.text-darken-4 "metadata"
                            [:i.mdi-navigation-close.right]

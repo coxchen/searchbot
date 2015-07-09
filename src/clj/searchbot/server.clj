@@ -50,13 +50,15 @@
    :aggregators []
    :widgets []})
 
+(defn load-view-edn [view]
+  (clojure.edn/read-string
+   (read-edn (str view ".edn") :default (pr-str default-app-state))))
+
 (defroutes routes
   (resources "/react" {:root "react"})
   (GET "/" req (apply str (init-page)))
-  (GET "/_init" req (response (clojure.edn/read-string
-                               (read-edn "app-state.edn" :default (pr-str default-app-state)))))
-  (GET "/_init/:view" [view] (response (clojure.edn/read-string
-                                        (read-edn (str view ".edn") :default (pr-str default-app-state)))))
+  (GET "/_init" req (response (load-view-edn "app-state")))
+  (GET "/_init/:view" [view] (response (load-view-edn view)))
   (GET "/es/:idx/_count" [idx]
        (response (es/es-count (get-es-host) idx)))
   (POST "/es/:idx/_search" [idx :as req]

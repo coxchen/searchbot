@@ -57,6 +57,10 @@
                                (read-edn "app-state.edn" :default (pr-str default-app-state)))))
   (GET "/_init/:view" [view] (response (clojure.edn/read-string
                                         (read-edn (str view ".edn") :default (pr-str default-app-state)))))
+  (GET "/es/:idx/_count" [idx]
+       (response (es/es-count (get-es-host) idx)))
+  (POST "/es/:idx/_search" [idx :as req]
+        (response (es/es-search (get-es-host) idx (:body req))))
   (GET "/es/:idx/:idxType/_count" [idx idxType]
        (response (es/es-count (get-es-host) idx idxType)))
   (POST "/es/:idx/:idxType/_search" [idx idxType :as req]

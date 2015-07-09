@@ -53,12 +53,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn- make-agg [agg-job]
-  (merge (:body agg-job)
-         {:query
-          {:filtered
-           {:query {:match_all {}}
-            :filter {:range
-                     {:_timestamp {:gte (or (:gte agg-job) "now-24h") :lte "now"}}}}}}))
+  (let [match-all-query {:query {:match_all {}}}
+        query (if-let [query-filter (or (-> agg-job :filter) (-> agg-job :default :filter))]
+                {:query {:filtered (assoc match-all-query :filter query-filter)}}
+                match-all-query)]
+    (-> query (merge (:body agg-job)))))
 
 (defn >agg [{:keys [url body agg-key] :as job} result-channel]
   (go (let [{agg :body} (<! (http/post url {:json-params (-> (make-agg job) (assoc :search_type "count"))}))]
@@ -73,7 +72,7 @@
               (go (while true
                     (let [resp (<! (:resp-chan (om/get-shared owner)))]
                       (om/update! cursor (:agg-key resp) (:resp resp))))))
-  (render [this] (html [:.row [:.col.s4
+  (render [this] (html [:.row (if (not (:show-summary cursor)) {:class "hide"}) [:.col.s4
                         [:.card.blue-grey.darken-1
                          [:.card-content.amber-text.text-accent-4
                           [:table.responsive-table.hoverable.bordered
@@ -83,7 +82,8 @@
                              [:th {:align "right"} "Records aggregated"]
                              [:th {:align "right"} "Time (ms)"]]]
                            [:tbody
-                            (for [aggKey (filter #(not= :div %) (-> cursor keys))]
+                            (for [aggKey (filter (fn [k] (not (some #(= k %) [:div :show-summary])))
+                                                 (-> cursor keys))]
                               [:tr
                                [:td [:span (name aggKey)]]
                                [:td (-> cursor aggKey :hits :total str commify)]
@@ -169,11 +169,10 @@
 ;;;;;;;;;;;;;;;;
 
 
-(defn >jobs [jobs req-chan urls]
+(defn >jobs [jobs req-chan settings]
   (go (doseq [job jobs]
-        (let [job (if (:url job)
-                    job
-                    (assoc job :url (:agg (urls))))]
+        (let [job (assoc job :url (or (:url job) (:url-agg (settings)))
+                             :default (:default (settings)))]
           (>! req-chan job)))))
 
 (defn fetch-meta [url]
@@ -198,7 +197,7 @@
 (defcomponent navbar [cursor owner opts]
   (render [_]
           (html
-           [:div
+           [:div (if (not (:nav cursor)) {:class "hide"})
             [:nav
              [:div.nav-wrapper
               [:ul.hide-on-med-and-down
@@ -210,6 +209,6 @@
                                    (go (let [from-server (<! (init-app-state cursor (:view nav)))
                                              shared (om/get-shared owner)
                                              {req-chan :req-chan} shared
-                                             {es-urls :es-urls} shared]
-                                         (>jobs (:aggregators from-server) req-chan es-urls))))}
+                                             {es-settings :es-es-settings} shared]
+                                         (>jobs (:aggregators from-server) req-chan es-settings))))}
                    (:label nav)]])]]]])))

@@ -14,12 +14,12 @@
                           :agg {}}))
 
 (defn- agg-jobs [] (om/ref-cursor (:aggregators (om/root-cursor app-state))))
-(defn- es-urls [] (om/ref-cursor (:es-api (om/root-cursor app-state))))
+(defn- es-settings [] (om/ref-cursor (:es-settings (om/root-cursor app-state))))
 
 (defcomponent my-app [app owner]
   (will-mount [_]
               (go (let [{jobs :aggregators} (<! (init-app-state app))]
-                    (>jobs jobs (:req-chan (om/get-shared owner)) es-urls))))
+                    (>jobs jobs (:req-chan (om/get-shared owner)) es-settings))))
   (render [_] (html [:div
                      (om/build navbar app)
                      (om/build the-aggregator (:agg app))
@@ -35,7 +35,7 @@
     (go (while true
           (let [jobs (agg-jobs)]
             (.log js/console (str (count jobs) " jobs: " (map :agg-key jobs)))
-            (>jobs jobs req-chan es-urls)
+            (>jobs jobs req-chan es-settings)
             (<! (timeout 30000)))))
 
     (om/root off-canvas
@@ -46,5 +46,5 @@
                      :sub-menu {:content widget-detail :header "Widget Design"}}
               :shared {:req-chan req-chan
                        :resp-chan resp-chan
-                       :es-urls es-urls}})
+                       :es-settings es-settings}})
     ))

@@ -173,6 +173,7 @@
   (go (doseq [job jobs]
         (let [job (assoc job :url (or (:url job) (:url-agg (settings)))
                              :default (:default (settings)))]
+          (.log js/console "[>job]" (:agg-key job))
           (>! req-chan job)))))
 
 (defn fetch-meta [url]
@@ -205,10 +206,10 @@
                  [:li {:class (if (:active nav) "active")}
                   [:a {:href "#"
                        :on-click (fn [_]
-                                   (.log js/console (:view nav))
+                                   (.log js/console "[view]" (:view nav))
                                    (go (let [from-server (<! (init-app-state cursor (:view nav)))
                                              shared (om/get-shared owner)
                                              {req-chan :req-chan} shared
-                                             {es-settings :es-es-settings} shared]
+                                             {es-settings :es-settings} shared]
                                          (>jobs (:aggregators from-server) req-chan es-settings))))}
                    (:label nav)]])]]]])))

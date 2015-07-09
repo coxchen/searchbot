@@ -1,6 +1,6 @@
 (ns searchbot.server
   (:require [clojure.java.io :as io]
-            [clojure.edn]
+            [clojure.edn :as edn]
             [searchbot.dev :refer [is-dev? inject-devmode-html browser-repl start-figwheel]]
             [compojure.core :refer [GET POST defroutes]]
             [compojure.route :refer [resources not-found]]
@@ -22,21 +22,20 @@
 
 (defn- read-edn
   [ednfile & {:keys [default]}]
-  (if (has-file? ednfile)
-    (slurp ednfile)
-    default))
+  (let [ednfile (str ednfile ".edn")
+        edn-content (if (has-file? ednfile)
+                      (slurp ednfile)
+                      (pr-str default))]
+    (edn/read-string edn-content)))
 
-(def ^:private es-host
-  (atom {:host "127.0.0.1" :port "9200"}))
+(def ^:private server-default
+  (atom {:es {:host "localhost" :port 9200}
+         :nav [{:view "app-state" :label "Default" :active true}]}))
 
-(defn get-es-host
-  []
-  (str "http://"
-       (or (get-in (clojure.edn/read-string (read-edn "server.edn")) [:es :host])
-           (:host @es-host))
-       ":"
-       (or (get-in (clojure.edn/read-string (read-edn "server.edn")) [:es :port])
-           (:port @es-host))))
+(defn- load-server-edn [] (read-edn "server" :default @server-default))
+
+(defn get-es-host []
+  (str "http://" (get-in (load-server-edn) [:es :host]) ":" (get-in (load-server-edn) [:es :port])))
 
 (deftemplate init-page (io/resource "index.html") []
   [:body] (if is-dev? inject-devmode-html identity))
@@ -50,9 +49,18 @@
    :aggregators []
    :widgets []})
 
+(defn- activate-nav
+  [navs active-view]
+  (map (fn [nav] (if (= (:view nav) active-view)
+                   (assoc nav :active true)
+                   (assoc nav :active false)))
+       navs))
+
 (defn load-view-edn [view]
-  (clojure.edn/read-string
-   (read-edn (str view ".edn") :default (pr-str default-app-state))))
+  (let [navs (:nav (load-server-edn))
+        navs (activate-nav navs view)
+        view-edn (read-edn view :default default-app-state)]
+    (assoc view-edn :nav navs)))
 
 (defroutes routes
   (resources "/react" {:root "react"})

@@ -6,17 +6,23 @@
 ;;;;;;;;;;;;;;;;;;
 ;; meta components
 
+;; (defn- rainbow [node]
+;;   (.color js/Rainbow node))
+
+(defn- log [msg]
+  (.log js/console msg))
+
 (defcomponent detail [cursor owner opts]
   (render [_]
           (html
            [:pre {:style {:font-size "8pt"}}
-            [:code.json {:ref "detail"} (.stringify js/JSON (clj->js cursor) nil 4)]]))
+            [:code.language-javascript {:ref "detail"} (.stringify js/JSON (clj->js cursor) nil 4)]]))
   (did-update [_ _ _]
-              (-> (om/get-node owner "detail")
-                  (js/hljs.highlightBlock)))
+              (->> (om/get-node owner "detail")
+                   (.highlightElement js/Prism)))
   (did-mount [_]
-             (-> (om/get-node owner "detail")
-                 (js/hljs.highlightBlock))))
+             (->> detail-node (om/get-node owner "detail")
+                  (.highlightElement js/Prism))))
 
 (defcomponent widget-wrapper [cursor owner opts]
   (render [this] (html [:.card {:class (-> opts :_theme :card)}

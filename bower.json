@@ -21,6 +21,7 @@
     "dimple": "~2.1.2",
     "remodal": "~0.6.4",
     "codemirror": "~5.2.0",
-    "materialize": "~0.96.1"
+    "materialize": "~0.96.1",
+    "prism": "~1.0.0"
   }
 }

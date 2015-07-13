@@ -69,7 +69,7 @@
                            [:label {:for (:id opts)} "query string"]]
                           [:div "query"
                            [:pre {:style {:font-size "8pt"}}
-                            [:code.json {:ref "current-query-string"} (.stringify js/JSON (clj->js query) nil 4)]]]
+                            [:code.language-javascript {:ref "current-query-string"} (.stringify js/JSON (clj->js query) nil 4)]]]
                           [:div (str "resp: " (or (count (get-in query-result [:hits :hits])) 0) "/"
                                      (or (get-in query-result [:hits :total]) 0) " hits")
                            [:table.responsive-table.hoverable.bordered
@@ -96,7 +96,7 @@
                          ])))
   (did-update [_ _ _]
               (let [input (om/get-node owner "current-query-string")]
-                (js/hljs.highlightBlock input)))
+                (.highlightElement js/Prism input)))
   (did-mount [_]
              (-> (om/get-node owner "wrapper-collapsible")
                  (js/$)

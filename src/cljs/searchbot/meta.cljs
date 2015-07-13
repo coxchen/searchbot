@@ -6,12 +6,6 @@
 ;;;;;;;;;;;;;;;;;;
 ;; meta components
 
-;; (defn- rainbow [node]
-;;   (.color js/Rainbow node))
-
-(defn- log [msg]
-  (.log js/console msg))
-
 (defcomponent detail [cursor owner opts]
   (render [_]
           (html
@@ -21,7 +15,7 @@
               (->> (om/get-node owner "detail")
                    (.highlightElement js/Prism)))
   (did-mount [_]
-             (->> detail-node (om/get-node owner "detail")
+             (->> (om/get-node owner "detail")
                   (.highlightElement js/Prism))))
 
 (defcomponent widget-wrapper [cursor owner opts]

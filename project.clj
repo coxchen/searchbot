@@ -5,20 +5,19 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
   :source-paths ["src/clj"]
-  :repl-options {:timeout 200000} ;; Defaults to 30000 (30 seconds)
 
   :test-paths ["spec/clj"]
 
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [org.clojure/clojurescript "0.0-2511" :scope "provided"]
+                 [org.clojure/clojurescript "0.0-3058" :scope "provided"]
                  [ring "1.3.2"]
                  [ring/ring-core "1.3.2"]
                  [ring/ring-json "0.3.1"]
                  [ring-json-response "0.2.0"]
                  [ring/ring-defaults "0.1.4"]
-                 [compojure "1.3.1"]
-                 [enlive "1.1.5"]
-                 [om "0.8.0-rc1"]
+                 [compojure "1.3.2"]
+                 [enlive "1.1.6"]
+                 [org.omcljs/om "0.8.8"]
                  [environ "1.0.0"]
                  [http-kit "2.1.19"]
                  [prismatic/om-tools "0.3.10"]
@@ -27,7 +26,7 @@
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [clojurewerkz/elastisch "2.1.0"]]
 
-  :plugins [[lein-cljsbuild "1.0.3"]
+  :plugins [[lein-cljsbuild "1.0.5"]
             [lein-environ "1.0.0"]]
 
   :min-lein-version "2.5.0"
@@ -43,19 +42,20 @@
   :profiles {:dev {:source-paths ["env/dev/clj"]
                    :test-paths ["test/clj"]
 
-                   :dependencies [[figwheel "0.2.1-SNAPSHOT"]
-                                  [figwheel-sidecar "0.2.1-SNAPSHOT"]
-                                  [com.cemerick/piggieback "0.1.3"]
-                                  [weasel "0.4.2"]]
+                   :dependencies [[figwheel "0.2.5"]
+                                  [figwheel-sidecar "0.2.5"]
+                                  [com.cemerick/piggieback "0.1.5"]
+                                  [weasel "0.6.0"]]
 
                    :repl-options {:init-ns searchbot.server
                                   :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
-                   :plugins [[lein-figwheel "0.2.1-SNAPSHOT"]]
+                   :plugins [[lein-figwheel "0.2.5"]]
 
                    :figwheel {:http-server-root "public"
                               :server-port 3449
-                              :css-dirs ["resources/public/css"]}
+                              :css-dirs ["resources/public/css"]
+                              :ring-handler searchbot.server/http-handler}
 
                    :env {:is-dev true}
 
@@ -74,6 +74,7 @@
                        :env {:production true}
                        :omit-source true
                        :aot :all
+                       :main searchbot.server
                        :cljsbuild {:builds {:app
                                             {:source-paths ["env/prod/cljs"]
                                              :compiler

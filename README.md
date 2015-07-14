@@ -36,4 +36,5 @@ Now your app is running at
 
 ## Chestnut
 
-Created with [Chestnut](http://plexus.github.io/chestnut/) 0.7.0.
+- Created with [Chestnut](http://plexus.github.io/chestnut/) 0.7.0.
+- Updated with [Chestnut](http://plexus.github.io/chestnut/) 0.8.1 (90e701e0).

@@ -58,14 +58,15 @@
 
 (defn load-view-edn [view]
   (let [navs (:nav (load-server-edn))
-        navs (activate-nav navs view)
-        view-edn (read-edn view :default default-app-state)]
+        the-view (or view (:view (first navs)) "app-state")
+        navs (activate-nav navs the-view)
+        view-edn (read-edn the-view :default default-app-state)]
     (assoc view-edn :nav navs)))
 
 (defroutes routes
   (resources "/react" {:root "react"})
   (GET "/" req (apply str (init-page)))
-  (GET "/_init" req (response (load-view-edn "app-state")))
+  (GET "/_init" req (response (load-view-edn nil)))
   (GET "/_init/:view" [view] (response (load-view-edn view)))
   (GET "/es/:idx/_count" [idx]
        (response (es/es-count (get-es-host) idx)))

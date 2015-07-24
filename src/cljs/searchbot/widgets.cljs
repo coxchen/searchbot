@@ -8,6 +8,7 @@
             [searchbot.meta :refer [widget-wrapper detail]]
             [searchbot.charts :refer [es-chart]]
             [searchbot.search :refer [searchbox]]
+            [searchbot.parsets :refer [parsets]]
             ))
 
 (def poll-interval 30000)
@@ -135,6 +136,7 @@
     "agg-table" {:_widget agg-table :_wrapper widget-wrapper}
     "header" {:_widget header}
     "searchbox" {:_widget searchbox}
+    "parsets" {:_widget parsets}
     nil))
 
 (defn- build-component
@@ -163,8 +165,6 @@
 
 (defcomponent widgets [app owner opts]
   (render [_] (html [:div (for [row (:widgets app)] (build-row app row))])))
-
-
 
 ;;;;;;;;;;;;;;;;
 

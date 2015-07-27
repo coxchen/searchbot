@@ -30,8 +30,7 @@
 
 (defcomponent parsets [cursor owner {:keys [agg width height] :or {width 1000 height 600} :as opts}]
   (init-state [_]
-              {:width width :height height
-               :continue? true
+              {:continue? true
                :comm (chan)
                :parsets-agg (map keyword (:terms agg))
                :svg nil})
@@ -55,7 +54,7 @@
              [:span.card-title.black-text "# PARSETS"]
              [:div {:id "parsets"}]]]))
   (did-mount [_]
-             (let [{:keys [width height comm parsets-agg]} (om/get-state owner)
+             (let [{:keys [comm parsets-agg]} (om/get-state owner)
                    svg (new-svg "#parsets" width height)
                    chart (-> js/d3
                               .parsets

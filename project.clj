@@ -21,13 +21,14 @@
                  [environ "1.0.0"]
                  [http-kit "2.1.19"]
                  [prismatic/om-tools "0.3.10"]
-                 [sablono "0.2.22"]
+                 [sablono "0.3.4"]
                  [cljs-http "0.1.30"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [clojurewerkz/elastisch "2.1.0"]]
 
   :plugins [[lein-cljsbuild "1.0.5"]
-            [lein-environ "1.0.0"]]
+            [lein-environ "1.0.0"]
+            [lein-pprint "1.1.1"]]
 
   :min-lein-version "2.5.0"
 
@@ -81,4 +82,4 @@
                                              {:optimizations :whitespace ;:advanced
                                               :pretty-print true ;false
                                               }}}}}}
-  :main searchbot.server)
+  )

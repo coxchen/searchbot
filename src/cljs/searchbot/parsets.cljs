@@ -28,7 +28,7 @@
 (defn- new-svg [graph-id w h]
   (-> js/d3 (.select graph-id) (.append "svg") (.attr "width" w) (.attr "height" h)))
 
-(defcomponent parsets [cursor owner {:keys [agg width height] :or {width 1000 height 600} :as opts}]
+(defcomponent parsets [cursor owner {:keys [agg url width height] :or {width 1000 height 600} :as opts}]
   (init-state [_]
               {:continue? true
                :comm (chan)
@@ -43,7 +43,7 @@
                 (.log js/console "# parsets agg query:" (pr-str agg-query))
                 (go (while (:continue? (om/get-state owner))
                       (.log js/console "# running parsets aggregation")
-                      (let [{agg-result :aggregations} (<! (es-agg "/es/stats_avc_1d/avc/_search" agg-query))]
+                      (let [{agg-result :aggregations} (<! (es-agg (or url (:url-agg (es-settings))) agg-query))]
                         (>! comm (agg->parsets agg-result parsets-agg)))
                       (<! (timeout 30000))))
                 ))

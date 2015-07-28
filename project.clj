@@ -1,4 +1,4 @@
-(defproject searchbot "0.2.0"
+(defproject searchbot "0.2.1"
   :description "Searchbot for ES"
   :url "http://github.com/coxchen/searchbot"
   :license {:name "Eclipse Public License"
@@ -6,7 +6,7 @@
 
   :source-paths ["src/clj"]
 
-  :test-paths ["spec/clj"]
+  :test-paths ["test/clj"]
 
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/clojurescript "0.0-3058" :scope "provided"]

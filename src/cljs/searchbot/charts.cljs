@@ -91,14 +91,18 @@
 (defn- do-trans [trans agg-data agg-view]
   (if trans (trans agg-data agg-view) agg-data))
 
+(defn- extract-view [agg-data]
+  (fn [view]
+    (if (map? (get agg-data view))
+      (if-let [inner-bucks (get-in agg-data [view :buckets])]
+        (into {} (map (fn [inner] {(keyword (:key inner)) (:doc_count inner)}) inner-bucks))
+        {view (get-in agg-data [view :value])})
+      (select-keys agg-data [view]))))
+
 (defn- agg-val
   [agg-data views]
-  (reduce merge
-          (map (fn [view]
-                 (if (map? (get agg-data view))
-                   {view (get-in agg-data [view :value])}
-                   (select-keys agg-data [view])))
-               views)))
+  (let [result (reduce merge (map (extract-view agg-data) views))]
+    result))
 
 (defn- flatten-agg-buckets
   [agg-view agg-buckets]

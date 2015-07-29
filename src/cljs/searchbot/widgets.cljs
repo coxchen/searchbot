@@ -44,7 +44,8 @@
 (defcomponent header [app owner opts]
   (will-mount [_]
               (go (while true
-                    (let [docCount (<! (es-count (-> app :es-api :count)))]
+                    (let [{es-settings :es-settings} (om/get-shared owner)
+                          docCount (<! (es-count (:url-count (es-settings))))]
                       (om/update! app [:es-count] docCount))
                     (<! (timeout (or (-> app :poll-interval) poll-interval))))))
   (render [_]

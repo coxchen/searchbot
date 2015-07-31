@@ -28,7 +28,7 @@
 (defn- new-svg [graph-id w h]
   (-> js/d3 (.select graph-id) (.append "svg") (.attr "width" w) (.attr "height" h)))
 
-(defcomponent parsets [cursor owner {:keys [agg url width height] :or {width 1000 height 600} :as opts}]
+(defcomponent parsets [cursor owner {:keys [agg url height] :or {height 600} :as opts}]
   (init-state [_]
               {:continue? true
                :comm (chan)
@@ -52,19 +52,23 @@
            [:.card
             [:.card-content
              [:span.card-title.black-text "# PARSETS"]
-             [:div {:id "parsets"}]]]))
+             [:div#parsets {:ref "parsets-div"}]]]))
   (did-mount [_]
              (let [{:keys [comm parsets-agg]} (om/get-state owner)
-                   svg (new-svg "#parsets" width height)
+                   card-width (->> "parsets-div" (om/get-node owner) (.-offsetWidth))
+                   get-svg #(new-svg "#parsets" card-width height)
+                   svg (get-svg)
                    chart (-> js/d3
-                              .parsets
-                              (.dimensions (clj->js (map name parsets-agg)))
-                              (.value (fn [d i] (. d -value))))]
+                             .parsets
+                             (.width card-width)
+                             (.height height)
+                             (.dimensions (clj->js (map name parsets-agg)))
+                             (.value (fn [d i] (. d -value))))]
                (om/update-state! owner #(assoc % :svg svg))
                (go (while (:continue? (om/get-state owner))
                      (let [parsets-data (<! comm)
                            _ (-> js/d3 (.select "#parsets > svg") .remove)
-                           svg (new-svg "#parsets" width height)]
+                           svg (get-svg)]
                        (.log js/console "# parsets aggregation:" (count parsets-data))
                        (-> svg (.datum (clj->js parsets-data))
                            (.call chart))

@@ -22,7 +22,6 @@
                     (>jobs jobs (:req-chan (om/get-shared owner)) es-settings))))
   (render [_] (html [:div
                      (om/build navbar app)
-                     (om/build the-aggregator (:agg app))
                      (om/build widgets app)]))
   (did-update [_ _ _]
               (.log js/console "# updating my-app")))

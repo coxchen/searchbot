@@ -74,14 +74,14 @@
               (go (while true
                     (let [resp (<! (:resp-chan (om/get-shared owner)))]
                       (om/update! cursor (:agg-key resp) (:resp resp))))))
-  (render [this] (html [:.row (if (not (:show-summary cursor)) {:class "hide"}) [:.col.s4
+  (render [this] (html [:.row [:.col.s12
                         [:.card.blue-grey.darken-1
                          [:.card-content.amber-text.text-accent-4
                           [:table.responsive-table.hoverable.bordered
                            [:thead
                             [:tr
                              [:th {:align "right"} "Aggregation"]
-                             [:th {:align "right"} "Records aggregated"]
+                             [:th {:align "right"} "Records"]
                              [:th {:align "right"} "Time (ms)"]]]
                            [:tbody
                             (for [aggKey (filter (fn [k] (not (some #(= k %) [:div :show-summary])))
@@ -89,7 +89,8 @@
                               [:tr
                                [:td [:span (name aggKey)]]
                                [:td (-> cursor aggKey :hits :total str commify)]
-                               [:td (-> cursor aggKey :took str commify)]])]]]]]]))
+                               [:td (-> cursor aggKey :took str commify)]])]]]]]]
+                       ))
   (did-update [_ _ _]
               (.log js/console "# the-aggregator updated")))
 
@@ -200,6 +201,8 @@
   (render [_]
           (html
            [:div (if (not (:nav cursor)) {:class "hide"})
+            [:ul#aggregators-dropdown.dropdown-content {:style {:z-index 2 :min-width "400px"}}
+             [:li (om/build the-aggregator (:agg cursor))]]
             [:nav
              [:div.nav-wrapper
               [:ul.hide-on-med-and-down
@@ -213,4 +216,16 @@
                                              {req-chan :req-chan} shared
                                              {es-settings :es-settings} shared]
                                          (>jobs (:aggregators from-server) req-chan es-settings))))}
-                   (:label nav)]])]]]])))
+                   (:label nav)]])
+               [:li.right
+                [:a.dropdown-button {:ref "dropdown-btn" :href "#!" :data-activates "aggregators-dropdown"}
+                 (let [{aggregators :aggregators} cursor
+                       agg-count (count aggregators)]
+                   [:span (str agg-count " aggregator" (if (> agg-count 1) "s") " running")
+                    [:i.right.fa.fa-caret-down]])]]
+                 ]]]]))
+  (did-mount [_]
+             (-> (om/get-node owner "dropdown-btn")
+                 (js/$)
+                 (.dropdown)))
+  )

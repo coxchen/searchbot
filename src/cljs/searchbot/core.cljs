@@ -35,7 +35,7 @@
           (let [jobs (agg-jobs)]
             (.log js/console (str (count jobs) " jobs: " (map :agg-key jobs)))
             (>jobs jobs req-chan es-settings)
-            (<! (timeout 30000)))))
+            (<! (timeout (or (:poll-interval @app-state) 30000))))))
 
     (om/root off-canvas
              app-state

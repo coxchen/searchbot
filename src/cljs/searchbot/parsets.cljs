@@ -4,7 +4,8 @@
             [om-tools.core :refer-macros [defcomponent]]
             [sablono.core :as html :refer-macros [html]]
             [cljs.core.async :refer [put! <! >! chan timeout close!]]
-            [searchbot.es :refer [es-agg filtered-agg]]))
+            [searchbot.es :refer [es-agg filtered-agg]]
+            [searchbot.input.labels :as labels]))
 
 (defn- build-parsets-agg
   [terms]
@@ -28,42 +29,80 @@
 (defn- new-svg [graph-id w h]
   (-> js/d3 (.select graph-id) (.append "svg") (.attr "width" w) (.attr "height" h)))
 
+(defn- ->query
+  [{:keys [agg-terms default-filter]}]
+  (let [agg-query (build-parsets-agg (reverse agg-terms))
+        agg-query (filtered-agg {:body agg-query
+                                 :filter default-filter})]
+    agg-query))
+
+(defn- do-parsets-agg
+  [owner]
+  (let [{:keys [continue? comm url get-agg-terms make-agg-query]} (om/get-state owner)
+        {es-settings :es-settings} (om/get-shared owner)]
+    (when continue?
+      (go (.log js/console "# running parsets aggregation:" (pr-str (get-agg-terms)))
+          (let [{agg-result :aggregations} (<! (es-agg (or url (:url-agg (es-settings))) (make-agg-query)))]
+            (>! comm (agg->parsets agg-result (get-agg-terms))))))))
+
+(defn- update-agg-terms-with-label
+  [owner label-string]
+  (let [agg-terms (labels/labelize label-string)
+        agg-terms (map :name agg-terms)
+        agg-terms (map keyword agg-terms)]
+    (.log js/console "@ label-updated:" (pr-str agg-terms))
+    (om/update-state! owner #(assoc % :parsets-agg agg-terms))
+    (do-parsets-agg owner)
+    ))
+
+(defn- make-parsets-chart [{:keys [height width get-parsets-agg]}]
+  (-> js/d3
+      .parsets
+      (.width width)
+      (.height height)
+      (.dimensions (clj->js (map name (get-parsets-agg))))
+      (.value (fn [d i] (. d -value)))))
+
 (defcomponent parsets [cursor owner {:keys [agg url height] :or {height 600} :as opts}]
   (init-state [_]
               {:continue? true
                :comm (chan)
+               :url url
                :parsets-agg (map keyword (:terms agg))
+               :get-agg-terms #(:parsets-agg (om/get-state owner))
+               :make-agg-query #(->query {:agg-terms ((:get-agg-terms (om/get-state owner)))
+                                          :default-filter (get-in (:es-settings (om/get-shared owner)) [:default :filter])})
                :svg nil})
   (will-mount [_]
-              (let [{:keys [parsets-agg comm]} (om/get-state owner)
-                    {es-settings :es-settings} (om/get-shared owner)
-                    agg-query (build-parsets-agg (reverse parsets-agg))
-                    agg-query (filtered-agg {:body agg-query
-                                             :filter (get-in (es-settings) [:default :filter])})]
-                (.log js/console "# parsets agg query:" (pr-str agg-query))
-                (go (while (:continue? (om/get-state owner))
-                      (.log js/console "# running parsets aggregation")
-                      (let [{agg-result :aggregations} (<! (es-agg (or url (:url-agg (es-settings))) agg-query))]
-                        (>! comm (agg->parsets agg-result parsets-agg)))
-                      (<! (timeout 30000))))
-                ))
+              (do-parsets-agg owner))
   (render [_]
           (html
            [:.card
             [:.card-content
-             [:span.card-title.black-text "# PARSETS"]
+             [:div.right {:style {:max-width "50%"}}
+              (let [get-agg-terms #(:parsets-agg (om/get-state owner))
+                    label-string (->> (get-agg-terms)
+                                      (map name)
+                                      (clojure.string/join " "))]
+                (om/build labels/labels cursor {:opts
+                                                {:labels (labels/labelize label-string)
+                                                 :on-label-updated! (partial update-agg-terms-with-label owner)}}))]
+             [:span.card-title.black-text
+              "# PARSETS [ "
+              [:strong (->> (:parsets-agg (om/get-state owner))
+                            (map name)
+                            (clojure.string/join " > "))]
+              " ]"]
              [:div#parsets {:ref "parsets-div"}]]]))
   (did-mount [_]
              (let [{:keys [comm parsets-agg]} (om/get-state owner)
                    card-width (->> "parsets-div" (om/get-node owner) (.-offsetWidth))
                    get-svg #(new-svg "#parsets" card-width height)
                    svg (get-svg)
-                   chart (-> js/d3
-                             .parsets
-                             (.width card-width)
-                             (.height height)
-                             (.dimensions (clj->js (map name parsets-agg)))
-                             (.value (fn [d i] (. d -value))))]
+                   chart #(make-parsets-chart
+                           {:height height :width card-width
+                            :get-parsets-agg (fn [_] (:parsets-agg (om/get-state owner)))})
+                   ]
                (om/update-state! owner #(assoc % :svg svg))
                (go (while (:continue? (om/get-state owner))
                      (let [parsets-data (<! comm)
@@ -71,7 +110,8 @@
                            svg (get-svg)]
                        (.log js/console "# parsets aggregation:" (count parsets-data))
                        (-> svg (.datum (clj->js parsets-data))
-                           (.call chart))
+                           (.call (chart))
+                           )
                        )))
                ))
   (will-unmount [_]

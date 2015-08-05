@@ -58,6 +58,7 @@
 (defn- make-parsets-chart [{:keys [height width get-parsets-agg]}]
   (-> js/d3
       .parsets
+      (.tension 0.8)
       (.width width)
       (.height height)
       (.dimensions (clj->js (map name (get-parsets-agg))))
@@ -77,16 +78,16 @@
               (do-parsets-agg owner))
   (render [_]
           (html
-           [:.card
+           [:.card {:ref "parsets-card"}
             [:.card-content
              [:div.right {:style {:max-width "50%"}}
               (let [get-agg-terms #(:parsets-agg (om/get-state owner))
                     label-string (->> (get-agg-terms)
                                       (map name)
                                       (clojure.string/join " "))]
-                (om/build labels/labels cursor {:opts
-                                                {:labels (labels/labelize label-string)
-                                                 :on-label-updated! (partial update-agg-terms-with-label owner)}}))]
+                (om/build labels/labels cursor
+                          {:opts {:labels (labels/labelize label-string)
+                                  :on-label-updated! (partial update-agg-terms-with-label owner)}}))]
              [:span.card-title.black-text
               "# PARSETS [ "
               [:strong (->> (:parsets-agg (om/get-state owner))
@@ -96,23 +97,21 @@
              [:div#parsets {:ref "parsets-div"}]]]))
   (did-mount [_]
              (let [{:keys [comm parsets-agg]} (om/get-state owner)
-                   card-width (->> "parsets-div" (om/get-node owner) (.-offsetWidth))
+                   parsets-div (om/get-node owner "parsets-div")
+                   card-width (.-offsetWidth parsets-div)
                    get-svg #(new-svg "#parsets" card-width height)
-                   svg (get-svg)
                    chart #(make-parsets-chart
                            {:height height :width card-width
-                            :get-parsets-agg (fn [_] (:parsets-agg (om/get-state owner)))})
-                   ]
-               (om/update-state! owner #(assoc % :svg svg))
+                            :get-parsets-agg (fn [_] (:parsets-agg (om/get-state owner)))})]
+               (.attach js/Waves (om/get-node owner "parsets-div") "waves-yellow")
                (go (while (:continue? (om/get-state owner))
                      (let [parsets-data (<! comm)
                            _ (-> js/d3 (.select "#parsets > svg") .remove)
                            svg (get-svg)]
                        (.log js/console "# parsets aggregation:" (count parsets-data))
                        (-> svg (.datum (clj->js parsets-data))
-                           (.call (chart))
-                           )
-                       )))
+                           (.call (chart)))
+                       (.ripple js/Waves (om/get-node owner "parsets-div")))))
                ))
   (will-unmount [_]
                 (let [{:keys [comm]} (om/get-state owner)]

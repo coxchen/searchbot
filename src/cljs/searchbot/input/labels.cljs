@@ -17,8 +17,8 @@
 (defn- toggle-edit! [owner target] (om/set-state! owner :editing-labels? (not (checked? owner target))))
 
 (defn- update-labels! [owner input-value]
-  (let [new-labels (labelize input-value)]
-    (om/set-state! owner :labels new-labels)
+  (let [new-labelized (labelize input-value)]
+    (om/set-state! owner :labelized new-labelized)
     (om/set-state! owner :labels-string input-value)))
 
 (defn- style-trans
@@ -59,10 +59,10 @@
 
 (defcomponent labels [app owner {:keys [labels on-label-updated!]}]
   (init-state [_]
-              {:labels labels
+              {:labelized labels
                :labels-string (clojure.string/join " " (map :name labels))
                :editing-labels? false})
-  (render-state [_ {:keys [labels labels-string editing-labels?]}]
+  (render-state [_ {:keys [labelized labels-string editing-labels?]}]
                 (html
                  [:.card
                   [:.card-content {:ref "card"}
@@ -80,7 +80,7 @@
                                              ))}]
                      [:span.lever]
                      [(if editing-labels? :strong :span) "Edit"]]]
-                   (for [l labels]
+                   (for [l labelized]
                      [:a.teal.btn {:style {:cursor "default" :text-transform "none" :margin-right "5px" :margin-top "5px"}}
                       [:i.fa.fa-tag.left] (:name l)])
                    (make-labels-input {:owner owner :labels-string labels-string

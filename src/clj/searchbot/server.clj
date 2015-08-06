@@ -1,6 +1,7 @@
 (ns searchbot.server
   (:require [clojure.java.io :as io]
             [clojure.edn :as edn]
+            [clojure.tools.cli :refer [parse-opts]]
             [searchbot.dev :refer [is-dev? inject-devmode-html browser-repl start-figwheel]]
             [compojure.core :refer [GET POST defroutes]]
             [compojure.route :refer [resources not-found]]
@@ -93,7 +94,6 @@
 (def http-handler
   (if is-dev?
     (reload/wrap-reload (wrap-routes))
-;;     (wrap-defaults routes api-defaults)))
     (wrap-routes)))
 
 (defn run-web-server [& {:keys [port]}]
@@ -111,5 +111,35 @@
     (run-auto-reload))
   (run-web-server :port port))
 
-(defn -main [& [port]]
-  (run :port port))
+(defn version
+  "Print version for SearchBot and the current JVM."
+  []
+  (println "SearchBot" (System/getenv "SEARCHBOT_VERSION")
+           "on Java" (System/getProperty "java.version")
+           (System/getProperty "java.vm.name")))
+
+(defn print-help [summary]
+  (println "Usage: searchbot [-p 10555] command args\n")
+  (println "# Options available:")
+  (println summary)
+  (println "----------")
+  (println "# Commands available:")
+  (println " run      Run SearchBot.")
+  (println " version  Print SearchBot version.")
+  (println " upgrade  Upgrade SearchBot to a latest version."))
+
+(def cli-opts
+  [["-p" "--port PORT" "Port used for SearchBot API server."
+    :id :port
+    :default 10555
+    :parse-fn #(Integer/parseInt %)]])
+
+(defn -main [& args]
+  (let [{:keys [options arguments summary]} (parse-opts args cli-opts)
+        {:keys [port]} options
+        cmd (first arguments)
+        args (next arguments)]
+    (case cmd
+      "run" (do (version) (run :port port))
+      "version" (version)
+      (print-help summary))))

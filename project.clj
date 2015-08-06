@@ -24,7 +24,8 @@
                  [sablono "0.3.4"]
                  [cljs-http "0.1.30"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
-                 [clojurewerkz/elastisch "2.1.0"]]
+                 [clojurewerkz/elastisch "2.1.0"]
+                 [org.clojure/tools.cli "0.3.2"]]
 
   :plugins [[lein-cljsbuild "1.0.5"]
             [lein-environ "1.0.0"]

@@ -8,42 +8,42 @@
             [searchbot.input.labels :as labels]))
 
 (defn- build-parsets-agg
-  [terms]
+  [terms sub-aggs]
   (reduce (fn [agg-query a-term]
             {:aggs {(keyword a-term) (merge {:terms {:field a-term}} agg-query)}})
-          {} terms))
+          {:aggs sub-aggs} terms))
 
-(defn- walk-buckets [de-buck bucket prefix steps]
-  (map #(de-buck % de-buck prefix (first steps) (rest steps))
+(defn- walk-buckets [de-buck bucket prefix steps value-path]
+  (map #(de-buck % de-buck prefix (first steps) (rest steps) value-path)
            (get-in bucket [(first steps) :buckets])))
 
-(defn- <-buckets [bucket de-buck prefix current-step steps]
+(defn- <-buckets [bucket de-buck prefix current-step steps value-path]
   (if (= 0 (count steps))
-    (merge prefix {current-step (:key bucket) :value (:doc_count bucket)})
+    (merge prefix {current-step (:key bucket) :value (get-in bucket value-path)})
     (let [prefix (merge prefix {current-step (:key bucket)})]
-      (walk-buckets <-buckets bucket prefix steps))))
+      (walk-buckets <-buckets bucket prefix steps value-path))))
 
-(defn- agg->parsets [agg-result all-steps]
-  (vec (flatten (walk-buckets <-buckets agg-result {} all-steps))))
+(defn- agg->parsets [agg-result all-steps value-path]
+  (vec (flatten (walk-buckets <-buckets agg-result {} all-steps value-path))))
 
 (defn- new-svg [graph-id w h]
   (-> js/d3 (.select graph-id) (.append "svg") (.attr "width" w) (.attr "height" h)))
 
 (defn- ->query
-  [{:keys [agg-terms default-filter]}]
-  (let [agg-query (build-parsets-agg (reverse agg-terms))
+  [{:keys [agg-terms sub-aggs default-filter]}]
+  (let [agg-query (build-parsets-agg (reverse agg-terms) sub-aggs)
         agg-query (filtered-agg {:body agg-query
                                  :filter default-filter})]
     agg-query))
 
 (defn- do-parsets-agg
   [owner]
-  (let [{:keys [continue? comm url get-agg-terms make-agg-query]} (om/get-state owner)
+  (let [{:keys [continue? comm url get-agg-terms make-agg-query value-path]} (om/get-state owner)
         {es-settings :es-settings} (om/get-shared owner)]
     (when continue?
       (go (.log js/console "# running parsets aggregation:" (pr-str (get-agg-terms)))
           (let [{agg-result :aggregations} (<! (es-agg (or url (:url-agg (es-settings))) (make-agg-query)))]
-            (>! comm (agg->parsets agg-result (get-agg-terms))))))))
+            (>! comm (agg->parsets agg-result (get-agg-terms) value-path)))))))
 
 (defn- update-agg-terms-with-label
   [owner label-string]
@@ -64,7 +64,7 @@
       (.dimensions (clj->js (map name (get-parsets-agg))))
       (.value (fn [d i] (. d -value)))))
 
-(defcomponent parsets [cursor owner {:keys [agg url height] :or {height 600} :as opts}]
+(defcomponent parsets [cursor owner {:keys [agg value-path url height] :or {height 600 value-path ["doc_count"]} :as opts}]
   (init-state [_]
               {:continue? true
                :comm (chan)
@@ -72,7 +72,9 @@
                :parsets-agg (map keyword (:terms agg))
                :get-agg-terms #(:parsets-agg (om/get-state owner))
                :make-agg-query #(->query {:agg-terms ((:get-agg-terms (om/get-state owner)))
+                                          :sub-aggs (:sub agg)
                                           :default-filter (get-in (:es-settings (om/get-shared owner)) [:default :filter])})
+               :value-path (apply vector (map keyword value-path))
                :svg nil})
   (will-mount [_]
               (do-parsets-agg owner))

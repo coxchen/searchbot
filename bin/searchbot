@@ -3,7 +3,7 @@
 #Modified from clojure-control:https://raw.github.com/killme2008/clojure-control/master/bin/control
 #License: Eclipse Public License, same as leiningen and clojure.
 
-export SEARCHBOT_VERSION="0.2.1"
+export SEARCHBOT_VERSION="0.2.2"
 
 case $SEARCHBOT_VERSION in
     *SNAPSHOT) SNAPSHOT="YES" ;;

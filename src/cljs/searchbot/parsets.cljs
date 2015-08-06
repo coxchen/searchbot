@@ -11,7 +11,7 @@
   [terms sub-aggs]
   (reduce (fn [agg-query a-term]
             {:aggs {(keyword a-term) (merge {:terms {:field a-term}} agg-query)}})
-          {:aggs sub-aggs} terms))
+          (if sub-aggs {:aggs sub-aggs} {}) terms))
 
 (defn- walk-buckets [de-buck bucket prefix steps value-path]
   (map #(de-buck % de-buck prefix (first steps) (rest steps) value-path)

@@ -73,7 +73,7 @@
                :get-agg-terms #(:parsets-agg (om/get-state owner))
                :make-agg-query #(->query {:agg-terms ((:get-agg-terms (om/get-state owner)))
                                           :sub-aggs (:sub agg)
-                                          :default-filter (get-in (:es-settings (om/get-shared owner)) [:default :filter])})
+                                          :default-filter (get-in ((:es-settings (om/get-shared owner))) [:default :filter])})
                :value-path (apply vector (map keyword value-path))
                :svg nil})
   (will-mount [_]

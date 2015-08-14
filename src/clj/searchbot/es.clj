@@ -11,7 +11,21 @@
 
 (defn- pr-resp
   [resp]
-  (println "[resp]" (-> resp :aggregations keys first) "took" (:took resp) "ms"))
+  (let [took (:took resp)
+        top-agg-key (-> resp :aggregations keys first)
+        top-agg-buckets (-> resp :aggregations top-agg-key :buckets)
+        top-agg (->> top-agg-buckets (map (juxt :key :doc_count)) flatten)
+        hits (-> resp :hits :total)
+        shards ((juxt :total :successful :failed) (:_shards resp))]
+    (println "[now]" (java.util.Date.)
+             "[resp]" top-agg-key
+             "[took]" took "ms"
+             "[shards]" shards
+             "[hits]" hits
+             "[agg]" top-agg)
+;;     (println "[raw]" (keys resp))
+;;     (println "[raw]" (:_shards resp))
+    ))
 
 (defn es-search
   ([host idx query]

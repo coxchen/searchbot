@@ -1,4 +1,4 @@
-(defproject searchbot "0.2.2"
+(defproject searchbot "0.2.3"
   :description "Searchbot for ES"
   :url "http://github.com/coxchen/searchbot"
   :license {:name "Eclipse Public License"

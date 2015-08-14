@@ -23,8 +23,6 @@
              "[shards]" shards
              "[hits]" hits
              "[agg]" top-agg)
-;;     (println "[raw]" (keys resp))
-;;     (println "[raw]" (:_shards resp))
     ))
 
 (defn es-search

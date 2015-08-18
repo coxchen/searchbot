@@ -110,10 +110,11 @@
                      (let [parsets-data (<! comm)
                            _ (-> js/d3 (.select "#parsets > svg") .remove)
                            svg (get-svg)]
-                       (.log js/console "# parsets aggregation:" (count parsets-data))
-                       (-> svg (.datum (clj->js parsets-data))
-                           (.call (chart)))
-                       (.ripple js/Waves (om/get-node owner "parsets-div")))))
+                       (when (< 0 (count parsets-data))
+                         (.log js/console "# parsets aggregation:" (count parsets-data))
+                         (-> svg (.datum (clj->js parsets-data))
+                             (.call (chart)))
+                         (.ripple js/Waves (om/get-node owner "parsets-div"))))))
                ))
   (will-unmount [_]
                 (let [{:keys [comm]} (om/get-state owner)]

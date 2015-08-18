@@ -9,6 +9,7 @@
             [searchbot.charts :refer [es-chart]]
             [searchbot.search :refer [searchbox]]
             [searchbot.parsets :refer [parsets]]
+            [searchbot.filters :refer [filters]]
             ))
 
 (def poll-interval 30000)
@@ -139,13 +140,17 @@
     "header" {:_widget header}
     "searchbox" {:_widget searchbox}
     "parsets" {:_widget parsets}
+    "filters" {:_widget filters}
     nil))
 
 (defn- build-component
   [app widget]
   (let [component (get-component (:type widget))
-        cursor (-> widget :cursor keyword)
-        cursor-data (if cursor (get app cursor) app)]
+        cursor (:cursor widget)
+        cursor (if (sequential? cursor)
+                 (mapv keyword cursor)
+                 (-> cursor keyword vector))
+        cursor-data (if cursor (get-in app cursor) app)]
     (if component
       (if (:_wrapper component)
         (om/build widget-wrapper cursor-data {:opts (merge widget component (widget-theme (:type widget)))})

@@ -4,52 +4,52 @@
             [om-tools.core :refer-macros [defcomponent]]
             [sablono.core :as html :refer-macros [html]]))
 
-(defcomponent timerange [app owner opts]
-  (init-state [_]
-              {:enabled true
-               :active "1h"
-               :base-date (js/Date.)
-               :predefined [{:name "14 days" :val "14d"}
-                            {:name "7 days" :val "7d"}
-                            {:name "2 days" :val "2d"}
-                            {:name "1 days" :val "1d"}
-                            {:name "12 hrs" :val "12h"}
-                            {:name "4 hrs" :val "4h"}
-                            {:name "2 hrs" :val "2h"}
-                            {:name "1 hr" :val "1h"}]})
-  (render-state [_ {:keys [active base-date predefined]}]
+(defn format-moment [the-moment]
+  (.format the-moment "YYYY-MM-DD"))
+
+(defn js-date
+  ([] (js/moment))
+  ([timestamp] (js/moment timestamp)))
+
+(defcomponent timerange [cursor owner opts]
+  (render-state [_ _]
                 (html
                  [:.row
                   [:.col
                    [:.card
                     [:.card-content
                      [:.row [:label "Last"]]
-                     (for [p (partition 4 predefined)]
+                     (for [p (partition 4 (:predefined cursor))]
                        [:.row
                         [:ul.pagination
                          (for [v p]
                            [:li.waves-effect
-                            {:class (if (= active (:val v)) "active")
+                            {:class (if (= (:active cursor) (:name v)) "active")
                              :on-click (fn [_]
-                                         (om/set-state! owner :active (:val v))
-                                         )}
+                                         (om/update! cursor :active (:name v)))}
                             [:a {:href "#!"}
-                             (:val v)]])
-                         ]])
+                             (:name v)]])]])
                      [:.row
                       [:label "of"]
                       [:.col.offset-s1
-                       [:input.datepicker
-                        {:ref "base-date" :type "date"
-                         :placeholder (.toDateString base-date)}]
+                       [:input.datepicker {:ref "base-date" :type "date"
+                                           :placeholder (-> cursor :base-date js-date format-moment)}]
                        ]]]]]]))
+  (did-update [_ _ _]
+              (.log js/console (-> cursor ((juxt :active :base-date)) pr-str)))
   (did-mount [_]
-             (-> (om/get-node owner "base-date")
-                 js/$
-                 (.pickadate (clj->js {:format "yyyy-mm-dd" :max true :min -14
-                                       :onSet (fn [context]
-                                                (if (:select context)
-                                                  (om/set-state! owner :base-date (js/Date. (:select context))))
-                                                )})))
-             )
+             (let [base-date (-> cursor :base-date js-date)
+                   min-date-val (-> opts :min js/Math.abs)
+                   min-date (.subtract (js-date base-date) min-date-val "d")]
+               (om/update! cursor :base-date base-date)
+               (-> (om/get-node owner "base-date")
+                   js/$
+                   (.pickadate (clj->js
+                                {:format (:format opts) :max (:base-date cursor) :min (.format min-date)
+                                 :onSet (fn [context]
+                                          (if-let [selected (-> context (.. -select))]
+                                            (do
+                                              (om/update! cursor :base-date (js-date selected))))
+                                          )})))
+               ))
   )

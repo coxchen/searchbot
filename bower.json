@@ -23,6 +23,7 @@
     "codemirror": "~5.2.0",
     "materialize": "~0.96.1",
     "prism": "~1.0.0",
-    "waves": "~0.7.2"
+    "waves": "~0.7.2",
+    "moment": "~2.10.6"
   }
 }

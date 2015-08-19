@@ -44,10 +44,11 @@
   (-> js/d3 (.select graph-id) (.append "svg") (.attr "width" w) (.attr "height" h)))
 
 (defn- ->query
-  [{:keys [agg-terms sub-aggs default-filter]}]
+  [{:keys [agg-terms sub-aggs filters default-filter]}]
   (let [agg-query (build-parsets-agg (reverse agg-terms) sub-aggs)
-        agg-query (filtered-agg {:body agg-query
-                                 :filter default-filter})]
+        agg-query (filtered-agg (merge {:body agg-query}
+                                 (merge {:filter default-filter}
+                                        (:combined-query filters))))]
     agg-query))
 
 (defn- do-parsets-agg
@@ -80,16 +81,19 @@
 
 (defcomponent parsets [cursor owner {:keys [agg value-path url height] :or {height 600 value-path ["doc_count"]} :as opts}]
   (init-state [_]
-              {:continue? true
-               :comm (chan)
-               :url url
-               :parsets-agg (map keyword (:terms agg))
-               :get-agg-terms #(:parsets-agg (om/get-state owner))
-               :make-agg-query #(->query {:agg-terms ((:get-agg-terms (om/get-state owner)))
-                                          :sub-aggs (:sub agg)
-                                          :default-filter (get-in ((:es-settings (om/get-shared owner))) [:default :filter])})
-               :value-path (apply vector (map keyword value-path))
-               :svg nil})
+              (let [{:keys [es-settings ref-state]} (om/get-shared owner)]
+                {:continue? true
+                 :comm (chan)
+                 :url url
+                 :parsets-agg (map keyword (:terms agg))
+                 :get-agg-terms #(:parsets-agg (om/get-state owner))
+                 :make-agg-query #(->query {:agg-terms ((:get-agg-terms (om/get-state owner)))
+                                            :sub-aggs (:sub agg)
+                                            :filters (ref-state :filters)
+                                            :default-filter (get-in (es-settings) [:default :filter])})
+                 :value-path (apply vector (map keyword value-path))
+                 :combined-query nil
+                 :svg nil}))
   (will-mount [_]
               (do-parsets-agg owner))
   (render [_]
@@ -111,6 +115,15 @@
                             (clojure.string/join " > "))]
               " ]"]
              [:div#parsets {:ref "parsets-div"}]]]))
+  (did-update [_ _ _]
+              (let [filters ((:ref-state (om/get-shared owner)) :filters)
+                    local-combined-query (-> (om/get-state owner) :combined-query)
+                    combined-query (:combined-query filters)]
+                (if-not (= local-combined-query combined-query)
+                  (do
+                    (om/update-state! owner #(assoc % :combined-query combined-query))
+                    (do-parsets-agg owner)))
+                (om/observe owner filters)))
   (did-mount [_]
              (let [{:keys [comm parsets-agg]} (om/get-state owner)
                    parsets-div (om/get-node owner "parsets-div")
@@ -129,6 +142,10 @@
                          (-> svg (.datum (clj->js parsets-data))
                              (.call (chart)))
                          (.ripple js/Waves (om/get-node owner "parsets-div"))))))
+               (let [filters ((:ref-state (om/get-shared owner)) :filters)
+                     combined-query (:combined-query filters)]
+                 (om/update-state! owner #(assoc % :combined-query combined-query))
+                 (om/observe owner filters))
                ))
   (will-unmount [_]
                 (let [{:keys [comm]} (om/get-state owner)]

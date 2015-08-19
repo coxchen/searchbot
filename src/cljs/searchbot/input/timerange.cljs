@@ -4,13 +4,13 @@
             [om-tools.core :refer-macros [defcomponent]]
             [sablono.core :as html :refer-macros [html]]))
 
-(defn mt->display [the-moment]
+(defn- mt->display [the-moment]
   (.format the-moment "YYYY-MM-DD"))
 
-(defn mt->query [the-moment]
+(defn- mt->query [the-moment]
   (.format the-moment "YYYY-MM-DDTHH:mm:ssZ"))
 
-(defn ->moment
+(defn- ->moment
   ([] (js/moment))
   ([timestamp] (js/moment timestamp)))
 
@@ -30,22 +30,24 @@
                   [:.col
                    [:.card
                     [:.card-content
-                     [:.row [:label "Last"]]
-                     (for [p (partition 4 (:predefined cursor))]
-                       [:.row
-                        [:ul.pagination
-                         (for [v p]
-                           [:li.waves-effect
-                            {:class (if (= (:active cursor) v) "active")
-                             :on-click (fn [_]
-                                         (om/update! cursor :active v))}
-                            [:a {:href "#!"} (:name v)]])]])
-                     [:.row
-                      [:label "of"]
-                      [:.col.offset-s1
-                       [:input.datepicker {:ref "base-date" :type "date"
-                                           :placeholder (-> cursor :base-date ->moment mt->display)}]
-                       ]]]]]]))
+                     [:.col
+                      [:.row [:label "Last"]]
+                      (for [p (partition 8 (:predefined cursor))]
+                        [:.row
+                         [:ul.pagination
+                          (for [v p]
+                            [:li.waves-effect
+                             {:class (if (= (:active cursor) v) "active")
+                              :on-click (fn [_]
+                                          (om/update! cursor :active v))}
+                             [:a {:href "#!"} (:name v)]])]])]
+                     [:.col
+                      [:.row
+                       [:label "of"]
+                       [:.col.offset-s1
+                        [:input.datepicker {:ref "base-date" :type "date"
+                                            :placeholder (-> cursor :base-date ->moment mt->display)}]
+                        ]]]]]]]))
   (did-update [_ _ _]
               (.log js/console (-> cursor ((juxt :active :base-date)) pr-str))
               (gen-query! cursor))

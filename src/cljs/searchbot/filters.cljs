@@ -16,7 +16,7 @@
     (-> collapsible js/$ (.collapsible {:accordion false}))))
 
 (defn- combine-filters! [cursor]
-  (let [generated (mapv #(-> % second :generated-query) @cursor)
+  (let [generated (mapv #(-> % second :generated-query) (dissoc @cursor :combined-query))
         combined {:filter {:bool {:must generated}}}]
     (om/update! cursor :combined-query combined)
     (.log js/console "@ combined" (-> @cursor :combined-query pr-str))))

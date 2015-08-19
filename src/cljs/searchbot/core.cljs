@@ -13,6 +13,7 @@
 (defonce app-state (atom {:aggregators []
                           :agg {}}))
 
+(defn- ref-state [k] (om/ref-cursor (k (om/root-cursor app-state))))
 (defn- agg-jobs [] (om/ref-cursor (:aggregators (om/root-cursor app-state))))
 (defn- es-settings [] (om/ref-cursor (:es-settings (om/root-cursor app-state))))
 
@@ -45,5 +46,6 @@
                      :sub-menu {:content widget-detail :header "Widget Design"}}
               :shared {:req-chan req-chan
                        :resp-chan resp-chan
-                       :es-settings es-settings}})
+                       :es-settings es-settings
+                       :ref-state ref-state}})
     ))

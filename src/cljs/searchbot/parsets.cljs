@@ -7,11 +7,25 @@
             [searchbot.es :refer [es-agg filtered-agg]]
             [searchbot.input.labels :as labels]))
 
+(defn- build-sub-aggs [sub-aggs]
+  (if sub-aggs {:aggs sub-aggs} {}))
+
+(defn- sort-sub [sub-aggs]
+  (if-let [sort-field (-> sub-aggs keys first)]
+    {:order {sort-field "desc"}}
+    {}))
+
 (defn- build-parsets-agg
   [terms sub-aggs]
   (reduce (fn [agg-query a-term]
-            {:aggs {(keyword a-term) (merge {:terms {:field a-term}} agg-query)}})
-          (if sub-aggs {:aggs sub-aggs} {}) terms))
+            {:aggs (merge
+                    {(keyword a-term) (merge
+                                       {:terms (merge
+                                                {:field a-term}
+                                                (sort-sub sub-aggs))}
+                                       agg-query)}
+                    sub-aggs)})
+          (build-sub-aggs sub-aggs) terms))
 
 (defn- walk-buckets [de-buck bucket prefix steps value-path]
   (map #(de-buck % de-buck prefix (first steps) (rest steps) value-path)

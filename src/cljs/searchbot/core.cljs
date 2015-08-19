@@ -13,14 +13,14 @@
 (defonce app-state (atom {:aggregators []
                           :agg {}}))
 
-(defn- ref-state [k] (om/ref-cursor (k (om/root-cursor app-state))))
+(defn- ref-state [k] (if-let [c (k (om/root-cursor app-state))] (om/ref-cursor c)))
 (defn- agg-jobs [] (om/ref-cursor (:aggregators (om/root-cursor app-state))))
 (defn- es-settings [] (om/ref-cursor (:es-settings (om/root-cursor app-state))))
 
 (defcomponent my-app [app owner]
   (will-mount [_]
               (go (let [{jobs :aggregators} (<! (init-app-state app))]
-                    (>jobs jobs (:req-chan (om/get-shared owner)) es-settings))))
+                    (>jobs jobs (:req-chan (om/get-shared owner)) ref-state es-settings))))
   (render [_] (html [:div
                      (om/build navbar app)
                      (om/build widgets app)]))
@@ -35,8 +35,8 @@
     (go (while true
           (let [jobs (agg-jobs)]
             (.log js/console (str (count jobs) " jobs: " (map :agg-key jobs)))
-            (>jobs jobs req-chan es-settings)
-            (<! (timeout (or (:poll-interval @app-state) 30000))))))
+            (>jobs jobs req-chan ref-state es-settings)
+            (<! (timeout (or (:poll-interval @app-state) 10000))))))
 
     (om/root off-canvas
              app-state

@@ -57,7 +57,9 @@
 
 (defn- make-agg [agg-job]
   (let [match-all-query {:query {:match_all {}}}
-        query (if-let [query-filter (or (-> agg-job :filter) (-> agg-job :default :filter))]
+        query (if-let [query-filter (or (-> agg-job :filter)
+                                        (-> agg-job :combined-filters :filter)
+                                        (-> agg-job :default :filter))]
                 {:query {:filtered (assoc match-all-query :filter query-filter)}}
                 match-all-query)]
     (-> query (merge (:body agg-job)))))
@@ -176,9 +178,10 @@
 ;;;;;;;;;;;;;;;;
 
 
-(defn >jobs [jobs req-chan settings]
+(defn >jobs [jobs req-chan ref-state settings]
   (go (doseq [job jobs]
         (let [job (assoc job :url (or (:url job) (:url-agg (settings)))
+                             :combined-filters (:combined-query (ref-state :filters))
                              :default (:default (settings)))]
           (.log js/console "[>job]" (:agg-key job))
           (>! req-chan job)))))
@@ -217,10 +220,8 @@
                        :on-click (fn [_]
                                    (.log js/console "[view]" (:view nav))
                                    (go (let [from-server (<! (init-app-state cursor (:view nav)))
-                                             shared (om/get-shared owner)
-                                             {req-chan :req-chan} shared
-                                             {es-settings :es-settings} shared]
-                                         (>jobs (:aggregators from-server) req-chan es-settings))))}
+                                             {:keys [req-chan es-settings ref-state]} (om/get-shared owner)]
+                                         (>jobs (:aggregators from-server) req-chan ref-state es-settings))))}
                    (:label nav)]])
                [:li.right
                 [:a.dropdown-button {:ref "dropdown-btn" :href "#!" :data-activates "aggregators-dropdown"}

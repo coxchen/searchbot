@@ -11,6 +11,16 @@
     "timerange" timerange
     nil))
 
+(defn- make-it-collapsible [owner ref-node]
+  (let [collapsible (om/get-node owner ref-node)]
+    (-> collapsible js/$ (.collapsible {:accordion false}))))
+
+(defn- combine-filters! [cursor]
+  (let [generated (mapv #(-> % second :generated-query) @cursor)
+        combined {:filter {:bool {:must generated}}}]
+    (om/update! cursor :combined-query combined)
+    (.log js/console "@ combined" (-> @cursor :combined-query pr-str))))
+
 (defcomponent filters [cursor owner opts]
   (render [_]
           (html
@@ -27,8 +37,11 @@
                      [:.col (om/build a-filter (get cursor (-> f :cursor keyword)) {:opts f})]))
                 ]]
                ]]]]))
+  (did-update [_ _ _]
+              (.log js/console "@ filters got updated")
+              (combine-filters! cursor))
   (did-mount [_]
-             (let [collapsible (om/get-node owner "filters-collapsible")]
-               (-> collapsible js/$ (.collapsible {:accordion false}))))
+             (combine-filters! cursor)
+             (make-it-collapsible owner "filters-collapsible"))
   )
 

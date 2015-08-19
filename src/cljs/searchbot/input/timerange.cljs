@@ -12,7 +12,9 @@
 
 (defn- ->moment
   ([] (js/moment))
-  ([timestamp] (js/moment timestamp)))
+  ([timestamp] (if timestamp
+                 (js/moment timestamp)
+                 (-> (js/moment) (.startOf "day")))))
 
 (defn- gen-query!
   [cursor]
@@ -60,7 +62,7 @@
                (-> (om/get-node owner "base-date")
                    js/$
                    (.pickadate (clj->js
-                                {:format (:format opts) :max (:base-date cursor) :min (.format min-date)
+                                {:format (:format opts) :max (or (:base-date cursor) true) :min (.format min-date)
                                  :onSet (fn [context]
                                           (if-let [selected (-> context (.. -select))]
                                             (do

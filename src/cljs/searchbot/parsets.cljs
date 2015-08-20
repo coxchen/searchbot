@@ -116,14 +116,14 @@
               " ]"]
              [:div#parsets {:ref "parsets-div"}]]]))
   (did-update [_ _ _]
-              (let [filters ((:ref-state (om/get-shared owner)) :filters)
-                    local-combined-query (-> (om/get-state owner) :combined-query)
-                    combined-query (:combined-query filters)]
-                (if-not (= local-combined-query combined-query)
-                  (do
-                    (om/update-state! owner #(assoc % :combined-query combined-query))
-                    (do-parsets-agg owner)))
-                (om/observe owner filters)))
+              (if-let [filters ((:ref-state (om/get-shared owner)) :filters)]
+                (let [local-combined-query (-> (om/get-state owner) :combined-query)
+                      combined-query (:combined-query filters)]
+                  (if-not (= local-combined-query combined-query)
+                    (do
+                      (om/update-state! owner #(assoc % :combined-query combined-query))
+                      (do-parsets-agg owner)))
+                  (om/observe owner filters))))
   (did-mount [_]
              (let [{:keys [comm parsets-agg]} (om/get-state owner)
                    parsets-div (om/get-node owner "parsets-div")
@@ -142,10 +142,10 @@
                          (-> svg (.datum (clj->js parsets-data))
                              (.call (chart)))
                          (.ripple js/Waves (om/get-node owner "parsets-div"))))))
-               (let [filters ((:ref-state (om/get-shared owner)) :filters)
-                     combined-query (:combined-query filters)]
-                 (om/update-state! owner #(assoc % :combined-query combined-query))
-                 (om/observe owner filters))
+               (if-let [filters ((:ref-state (om/get-shared owner)) :filters)]
+                 (let [combined-query (:combined-query filters)]
+                   (om/update-state! owner #(assoc % :combined-query combined-query))
+                   (om/observe owner filters)))
                ))
   (will-unmount [_]
                 (let [{:keys [comm]} (om/get-state owner)]

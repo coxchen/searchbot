@@ -33,3 +33,27 @@
                 {:query {:filtered (assoc match-all-query :filter query-filter)}}
                 match-all-query)]
     (-> query (merge (:body agg-job)))))
+
+;;;;;;;;;;;;;;;;;;;;;
+;; handle agg buckets
+
+(defn extract-view [agg-data]
+  (fn [view]
+    (if (map? (get agg-data view))
+      (if-let [inner-bucks (get-in agg-data [view :buckets])]
+        (into {} (map (fn [inner] {(keyword (:key inner)) (:doc_count inner)}) inner-bucks))
+        {view (get-in agg-data [view :value])})
+      (select-keys agg-data [view]))))
+
+
+(defn agg-val [agg-data views]
+  (let [result (reduce merge (map (extract-view agg-data) views))]
+    result))
+
+(defn flatten-agg-buckets [agg-view agg-buckets]
+  (map (fn [bucket]
+         (agg-val bucket agg-view))
+       agg-buckets))
+
+(defn get-agg-buckets [cursor bucket-path]
+  (-> cursor (get-in bucket-path) seq))

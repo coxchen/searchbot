@@ -100,32 +100,35 @@
       (.dimensions (clj->js (map name (get-parsets-agg))))
       (.value (fn [d i] (. d -value)))))
 
-(defn- build-dimensional-pie [cursor agg-prefix-terms term-name]
+(defn- dim-accessor [sub-agg]
+  (or sub-agg :doc_count))
+
+(defn- build-dimensional-pie [cursor agg-prefix-terms term-name sub-agg]
   (om/build es-chart
             cursor
             {:opts {:type "es-chart"
                     :id (str term-name "_pie")
                     :agg-key "terms-aggs"
                     :agg-top (str agg-prefix-terms term-name)
-                    :agg-view ["key" "sum_usage"]
+                    :agg-view ["key" (-> (dim-accessor sub-agg) name)]
                     :draw-fn "draw-ring"
                     :chart {:bounds {:x "5%" :y "15%" :width "80%" :height "80%"}
                             :plot "pie"
-                            :p-axis "sum_usage"
+                            :p-axis (-> (dim-accessor sub-agg) name)
                             :c-axis "key"}}}))
 
-(defn- build-dimensional-bar [cursor agg-prefix-terms term-name]
+(defn- build-dimensional-bar [cursor agg-prefix-terms term-name sub-agg]
   (om/build mg/mg-bar
             cursor
             {:opts {:id (str term-name "_pie")
                     :title term-name
                     :height 150
-                    :x "sum_usage"
+                    :x (-> (dim-accessor sub-agg) name)
                     :y "key"
                     :trans-fn (fn [data-cursor]
                                 (-> data-cursor
                                     (get-agg-buckets [:terms-aggs :aggregations (keyword (str agg-prefix-terms term-name)) :buckets])
-                                    (flatten-agg-buckets [:key :sum_usage])))}}))
+                                    (flatten-agg-buckets [:key (dim-accessor sub-agg)])))}}))
 
 (defcomponent parsets [cursor owner {:keys [agg value-path url height] :or {height 600 value-path ["doc_count"]} :as opts}]
   (init-state [_]
@@ -178,7 +181,7 @@
                      (if (:terms-aggs parsets-cursor)
                        (for [term (get-agg-terms)]
                          (let [term-name (name term)]
-                           (build-dimensional-bar parsets-cursor agg-prefix-terms term-name))))
+                           (build-dimensional-bar parsets-cursor agg-prefix-terms term-name (-> (:sub agg) keys first)))))
                      ]
                     ]]]
                  ))

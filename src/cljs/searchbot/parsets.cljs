@@ -4,9 +4,10 @@
             [om-tools.core :refer-macros [defcomponent]]
             [sablono.core :as html :refer-macros [html]]
             [cljs.core.async :refer [put! <! >! chan timeout close!]]
-            [searchbot.es :refer [es-agg filtered-agg]]
+            [searchbot.es :refer [es-agg filtered-agg get-agg-buckets flatten-agg-buckets]]
             [searchbot.input.labels :as labels]
-            [searchbot.charts :refer [es-chart]]))
+            [searchbot.charts :refer [es-chart]]
+            [searchbot.chart.metricgraphics :as mg]))
 
 (defn- build-sub-aggs [sub-aggs]
   (if sub-aggs {:aggs sub-aggs} {}))
@@ -22,7 +23,7 @@
             {:aggs (merge
                     {(keyword a-term)
                      (merge {:terms
-                             (merge {:field a-term}
+                             (merge {:field a-term :size 5}
                                     (sort-sub sub-aggs))}
                             agg-query)}
                     sub-aggs)})
@@ -30,7 +31,7 @@
 
 (defn- build-terms-agg [prefix terms sub-aggs]
   (let [terms-aggs (for [term terms]
-                     {(str prefix (name term)) (merge {:terms (merge {:field (name term)}
+                     {(str prefix (name term)) (merge {:terms (merge {:field (name term) :size 5}
                                                                      (sort-sub sub-aggs))}
                                                       (build-sub-aggs sub-aggs))})
         terms-aggs (reduce merge terms-aggs)]
@@ -99,6 +100,33 @@
       (.dimensions (clj->js (map name (get-parsets-agg))))
       (.value (fn [d i] (. d -value)))))
 
+(defn- build-dimensional-pie [cursor agg-prefix-terms term-name]
+  (om/build es-chart
+            cursor
+            {:opts {:type "es-chart"
+                    :id (str term-name "_pie")
+                    :agg-key "terms-aggs"
+                    :agg-top (str agg-prefix-terms term-name)
+                    :agg-view ["key" "sum_usage"]
+                    :draw-fn "draw-ring"
+                    :chart {:bounds {:x "5%" :y "15%" :width "80%" :height "80%"}
+                            :plot "pie"
+                            :p-axis "sum_usage"
+                            :c-axis "key"}}}))
+
+(defn- build-dimensional-bar [cursor agg-prefix-terms term-name]
+  (om/build mg/mg-bar
+            cursor
+            {:opts {:id (str term-name "_pie")
+                    :title term-name
+                    :height 150
+                    :x "sum_usage"
+                    :y "key"
+                    :trans-fn (fn [data-cursor]
+                                (-> data-cursor
+                                    (get-agg-buckets [:terms-aggs :aggregations (keyword (str agg-prefix-terms term-name)) :buckets])
+                                    (flatten-agg-buckets [:key :sum_usage])))}}))
+
 (defcomponent parsets [cursor owner {:keys [agg value-path url height] :or {height 600 value-path ["doc_count"]} :as opts}]
   (init-state [_]
               (let [{:keys [es-settings ref-state]} (om/get-shared owner)
@@ -128,6 +156,12 @@
                  [:.card {:ref "parsets-card"}
                   [:.card-content
                    [:.row
+                    [:div.right {:style {:max-width "50%"}}
+                     (let [label-string (->> (get-agg-terms) (map name) (clojure.string/join " "))]
+                       (om/build labels/labels cursor
+                                 {:opts {:labels (labels/labelize label-string)
+                                         :on-label-updated! (partial update-agg-terms-with-label owner)}}))
+                     ]
                     [:span.card-title.black-text "# PARSETS [ " [:strong (->> parsets-agg (map name) (clojure.string/join " > "))] " ]"]
                     [:p
                      [:input {:type "checkbox" :class "filled-in" :checked show-pies
@@ -136,32 +170,15 @@
                                                        checked (.-checked thisNode)]
                                                    (om/set-state! owner :show-pies checked)
                                                    (do-parsets-agg owner)))}]
-                     [:label {:for "toggle-show-pies"} "Show Pie Charts"]]
-                    [:div.right {:style {:max-width "50%"}}
-                     (let [label-string (->> (get-agg-terms) (map name) (clojure.string/join " "))]
-                       (om/build labels/labels cursor
-                                 {:opts {:labels (labels/labelize label-string)
-                                         :on-label-updated! (partial update-agg-terms-with-label owner)}}))]
+                     [:label {:for "toggle-show-pies"} "Show Dimensional Charts"]]
                     ]
                    [:.row
                     [:.col {:class (if show-pies "s9" "s12") :id "parsets" :ref "parsets-div"}]
                     [:.col {:class (if show-pies "s3" "hide")}
-                     (for [term (get-agg-terms)]
-                       (let [term-name (name term)]
-                         (om/build es-chart
-                                   parsets-cursor
-                                   {:opts {:type "es-chart"
-                                           :id (str term-name "_pie")
-                                           :agg-key "terms-aggs"
-                                           :agg-top (str agg-prefix-terms term-name)
-                                           :agg-view ["key" "sum_usage"]
-                                           :draw-fn "draw-ring"
-                                           :chart {:bounds {:x "5%" :y "15%" :width "80%" :height "80%"}
-                                                   :plot "pie"
-                                                   :p-axis "sum_usage"
-                                                   :c-axis "key"}}}
-                                   )
-                         ))
+                     (if (:terms-aggs parsets-cursor)
+                       (for [term (get-agg-terms)]
+                         (let [term-name (name term)]
+                           (build-dimensional-bar parsets-cursor agg-prefix-terms term-name))))
                      ]
                     ]]]
                  ))
@@ -177,7 +194,7 @@
   (did-mount [_]
              (let [{:keys [comm parsets-agg]} (om/get-state owner)
                    parsets-div (om/get-node owner "parsets-div")
-                   card-width #(.-offsetWidth parsets-div)
+                   card-width #(* 0.95 (.-offsetWidth parsets-div))
                    get-svg #(new-svg {:id "#parsets" :height height :width (card-width) :width-fn card-width})
                    chart #(make-parsets-chart
                            {:height height :width (card-width) :width-fn card-width

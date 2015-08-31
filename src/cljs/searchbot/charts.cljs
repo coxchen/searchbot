@@ -96,7 +96,7 @@
   [cursor {:keys [id chart agg-key agg-top agg-view draw-fn] :as opts}]
   (when-let [data (get-agg-buckets cursor [(keyword agg-key) :aggregations (keyword agg-top) :buckets])]
     (let [agg-view (map keyword agg-view)
-          flattened (flatten-agg-buckets agg-view data)
+          flattened (flatten-agg-buckets data agg-view)
           transed (do-trans (trans-fn draw-fn) flattened agg-view)]
       ((chart-fn draw-fn) transed (:div cursor) opts))))
 

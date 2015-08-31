@@ -17,3 +17,9 @@ h1 {
     overflow-y: auto;
 /*     font-family: 'Inconsolata', Arial, serif; */
 }
+
+.mg-chart-title {
+    font-size: 1.2rem;
+    margin: 0;
+    line-height: 0.5rem;
+}

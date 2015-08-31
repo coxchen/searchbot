@@ -50,10 +50,11 @@
   (let [result (reduce merge (map (extract-view agg-data) views))]
     result))
 
-(defn flatten-agg-buckets [agg-view agg-buckets]
-  (map (fn [bucket]
-         (agg-val bucket agg-view))
-       agg-buckets))
+(defn flatten-agg-buckets [agg-buckets agg-view]
+  (if agg-buckets
+    (map (fn [bucket]
+           (agg-val bucket agg-view))
+         agg-buckets)))
 
 (defn get-agg-buckets [cursor bucket-path]
   (-> cursor (get-in bucket-path) seq))

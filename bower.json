@@ -17,13 +17,14 @@
   ],
   "dependencies": {
     "bootstrap": "~3.3.1",
+    "codemirror": "~5.2.0",
     "d3": "~3.5.5",
     "dimple": "~2.1.2",
-    "remodal": "~0.6.4",
-    "codemirror": "~5.2.0",
     "materialize": "~0.96.1",
+    "metrics-graphics": "~2.6.0",
+    "moment": "~2.10.6",
     "prism": "~1.0.0",
-    "waves": "~0.7.2",
-    "moment": "~2.10.6"
+    "remodal": "~0.6.4",
+    "waves": "~0.7.2"
   }
 }

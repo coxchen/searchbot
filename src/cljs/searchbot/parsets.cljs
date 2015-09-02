@@ -51,9 +51,9 @@
   (vec (flatten (walk-buckets <-buckets agg-result {} steps value-path))))
 
 (defn- ->query
-  [{:keys [agg-terms sub-aggs agg-prefix-terms show-pies? filters default-filter]}]
+  [{:keys [agg-terms sub-aggs agg-prefix-terms show-dimensions? filters default-filter]}]
   (let [agg-query (build-parsets-agg (reverse agg-terms) sub-aggs)
-        agg-query (if (show-pies?)
+        agg-query (if (show-dimensions?)
                     {:aggs (merge (:aggs agg-query)
                                   (build-terms-agg agg-prefix-terms agg-terms sub-aggs))}
                     agg-query)
@@ -65,6 +65,9 @@
 (defn- update-terms-aggs [owner terms-aggs]
   (om/update-state! owner :parsets-cursor #(assoc-in % [:terms-aggs :aggregations] terms-aggs)))
 
+(defn- reset-highlighted [owner]
+  (-> js/d3 (.select (om/get-node owner "parsets-dims")) (.selectAll ".mg-bar") (.classed "highlight" false)))
+
 (defn- do-parsets-agg
   [owner]
   (let [{:keys [continue? comm url agg-prefix-terms get-agg-terms make-agg-query value-path]} (om/get-state owner)
@@ -75,7 +78,10 @@
             (let [term-keys (->> (get-agg-terms) (map #(->> % name (str agg-prefix-terms) keyword)))
                   terms-aggs (-> agg-result (select-keys term-keys))]
               (update-terms-aggs owner terms-aggs))
-            (>! comm (agg->parsets agg-result (get-agg-terms) value-path))
+            (let [parsets-data (agg->parsets agg-result (get-agg-terms) value-path)]
+              (reset-highlighted owner)
+              (om/update-state! owner #(assoc % :parsets-data parsets-data))
+              (>! comm parsets-data))
             )))))
 
 (defn- update-agg-terms-with-label
@@ -103,21 +109,19 @@
 (defn- dim-accessor [sub-agg]
   (or sub-agg :doc_count))
 
-(defn- build-dimensional-pie [cursor agg-prefix-terms term-name sub-agg]
-  (om/build es-chart
-            cursor
-            {:opts {:type "es-chart"
-                    :id (str term-name "_pie")
-                    :agg-key "terms-aggs"
-                    :agg-top (str agg-prefix-terms term-name)
-                    :agg-view ["key" (-> (dim-accessor sub-agg) name)]
-                    :draw-fn "draw-ring"
-                    :chart {:bounds {:x "5%" :y "15%" :width "80%" :height "80%"}
-                            :plot "pie"
-                            :p-axis (-> (dim-accessor sub-agg) name)
-                            :c-axis "key"}}}))
+(defn highlight [data facets]
+  (filter #(every? (fn [[k sel]] (or (empty? sel) (contains? sel (k %)))) facets) data))
 
-(defn- build-dimensional-bar [cursor agg-prefix-terms term-name sub-agg]
+(defn- select!
+  [owner act selected]
+  (let [{:keys [parsets-data highlighted]} (om/get-state owner)
+        dim-key (first selected)
+        sel-dim (into #{} (get highlighted dim-key))
+        sel-facets (assoc highlighted dim-key (act sel-dim (last selected)))]
+    (om/update-state! owner #(assoc % :highlighted sel-facets))
+    (put! (:comm (om/get-state owner)) (highlight parsets-data sel-facets))))
+
+(defn- build-bar [cursor owner agg-prefix-terms term-name sub-agg]
   (om/build mg/mg-bar
             cursor
             {:opts {:id (str term-name "_pie")
@@ -128,7 +132,13 @@
                     :trans-fn (fn [data-cursor]
                                 (-> data-cursor
                                     (get-agg-buckets [:terms-aggs :aggregations (keyword (str agg-prefix-terms term-name)) :buckets])
-                                    (flatten-agg-buckets [:key (dim-accessor sub-agg)])))}}))
+                                    (flatten-agg-buckets [:key (dim-accessor sub-agg)])))
+                    :on-click-cb (fn [d i]
+                                   (let [the-bar (-> js/d3 (.select (str "#" term-name "_pie")) (.selectAll ".mg-bar") js->clj (get-in [0 i]))
+                                         was-highlighted? (-> js/d3 (.select the-bar) (.classed "highlight"))
+                                         selected [(keyword term-name) (-> d js->clj (get "key"))]]
+                                     (-> js/d3 (.select the-bar) (.classed "highlight" (not was-highlighted?)))
+                                     (select! owner (if was-highlighted? disj conj) selected)))}}))
 
 (defcomponent parsets [cursor owner {:keys [agg value-path url height] :or {height 600 value-path ["doc_count"]} :as opts}]
   (init-state [_]
@@ -143,18 +153,20 @@
                  :make-agg-query #(->query {:agg-prefix-terms prefix-terms
                                             :agg-terms ((:get-agg-terms (om/get-state owner)))
                                             :sub-aggs (:sub agg)
-                                            :show-pies? (:show-pies? (om/get-state owner))
+                                            :show-dimensions? (:show-dimensions? (om/get-state owner))
                                             :filters (ref-state :filters)
                                             :default-filter (get-in (es-settings) [:default :filter])})
                  :value-path (apply vector (map keyword value-path))
                  :combined-query nil
                  :svg nil
+                 :parsets-data []
+                 :highlighted {}
                  :parsets-cursor (om/root-cursor (atom {:div {:width "90%" :height 200}}))
-                 :show-pies (:show-pies opts)
-                 :show-pies? #(:show-pies (om/get-state owner))}))
+                 :show-dimensions (get-in opts [:dimensions :show])
+                 :show-dimensions? #(:show-dimensions (om/get-state owner))}))
   (will-mount [_]
               (do-parsets-agg owner))
-  (render-state [_ {:keys [parsets-agg get-agg-terms agg-prefix-terms parsets-cursor show-pies ]}]
+  (render-state [_ {:keys [parsets-agg get-agg-terms agg-prefix-terms parsets-cursor show-dimensions]}]
                 (html
                  [:.card {:ref "parsets-card"}
                   [:.card-content
@@ -167,21 +179,21 @@
                      ]
                     [:span.card-title.black-text "# PARSETS [ " [:strong (->> parsets-agg (map name) (clojure.string/join " > "))] " ]"]
                     [:p
-                     [:input {:type "checkbox" :class "filled-in" :checked show-pies
-                              :id "toggle-show-pies" :ref "toggle-show-pies"
-                              :on-change (fn [_] (let [thisNode (om/get-node owner "toggle-show-pies")
+                     [:input {:type "checkbox" :class "filled-in" :checked show-dimensions
+                              :id "toggle-show-dimensions" :ref "toggle-show-dimensions"
+                              :on-change (fn [_] (let [thisNode (om/get-node owner "toggle-show-dimensions")
                                                        checked (.-checked thisNode)]
-                                                   (om/set-state! owner :show-pies checked)
+                                                   (om/set-state! owner :show-dimensions checked)
                                                    (do-parsets-agg owner)))}]
-                     [:label {:for "toggle-show-pies"} "Show Dimensional Charts"]]
+                     [:label {:for "toggle-show-dimensions"} "Show Dimensional Charts"]]
                     ]
                    [:.row
-                    [:.col {:class (if show-pies "s9" "s12") :id "parsets" :ref "parsets-div"}]
-                    [:.col {:class (if show-pies "s3" "hide")}
+                    [:.col {:class (if show-dimensions "s9" "s12") :id "parsets" :ref "parsets-div"}]
+                    [:.col {:class (if show-dimensions "s3" "hide") :ref "parsets-dims"}
                      (if (:terms-aggs parsets-cursor)
                        (for [term (get-agg-terms)]
                          (let [term-name (name term)]
-                           (build-dimensional-bar parsets-cursor agg-prefix-terms term-name (-> (:sub agg) keys first)))))
+                           (build-bar parsets-cursor owner agg-prefix-terms term-name (-> (:sub agg) keys first)))))
                      ]
                     ]]]
                  ))

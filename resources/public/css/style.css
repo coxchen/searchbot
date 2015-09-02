@@ -23,3 +23,11 @@ h1 {
     margin: 0;
     line-height: 0.5rem;
 }
+
+.mg-bar-rollover {
+    cursor: pointer;
+}
+
+.mg-barplot rect.mg-bar.highlight {
+    fill: #fc9e9e;
+}

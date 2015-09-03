@@ -122,23 +122,22 @@
     (put! (:comm (om/get-state owner)) (highlight parsets-data sel-facets))))
 
 (defn- build-bar [cursor owner agg-prefix-terms term-name sub-agg]
-  (om/build mg/mg-bar
-            cursor
-            {:opts {:id (str term-name "_pie")
-                    :title term-name
-                    :height 150
-                    :x (-> (dim-accessor sub-agg) name)
-                    :y "key"
-                    :trans-fn (fn [data-cursor]
-                                (-> data-cursor
-                                    (get-agg-buckets [:terms-aggs :aggregations (keyword (str agg-prefix-terms term-name)) :buckets])
-                                    (flatten-agg-buckets [:key (dim-accessor sub-agg)])))
-                    :on-click-cb (fn [d i]
-                                   (let [the-bar (-> js/d3 (.select (str "#" term-name "_pie")) (.selectAll ".mg-bar") js->clj (get-in [0 i]))
-                                         was-highlighted? (-> js/d3 (.select the-bar) (.classed "highlight"))
-                                         selected [(keyword term-name) (-> d js->clj (get "key"))]]
-                                     (-> js/d3 (.select the-bar) (.classed "highlight" (not was-highlighted?)))
-                                     (select! owner (if was-highlighted? disj conj) selected)))}}))
+  (let [chart-id (str (clojure.string/replace term-name #"\." "-") "_bar")
+        chart-sel (str "#" chart-id)]
+    (om/build mg/mg-bar
+              cursor
+              {:opts {:id chart-id :title term-name :height 150
+                      :x (-> (dim-accessor sub-agg) name) :y "key"
+                      :trans-fn (fn [data-cursor]
+                                  (-> data-cursor
+                                      (get-agg-buckets [:terms-aggs :aggregations (keyword (str agg-prefix-terms term-name)) :buckets])
+                                      (flatten-agg-buckets [:key (dim-accessor sub-agg)])))
+                      :on-click-cb (fn [d i]
+                                     (let [the-bar (-> js/d3 (.select chart-sel) (.selectAll ".mg-bar") js->clj (get-in [0 i]))
+                                           was-highlighted? (-> js/d3 (.select the-bar) (.classed "highlight"))
+                                           selected [(keyword term-name) (-> d js->clj (get "key"))]]
+                                       (-> js/d3 (.select the-bar) (.classed "highlight" (not was-highlighted?)))
+                                       (select! owner (if was-highlighted? disj conj) selected)))}})))
 
 (defcomponent parsets [cursor owner {:keys [agg value-path url height] :or {height 600 value-path ["doc_count"]} :as opts}]
   (init-state [_]
@@ -171,13 +170,13 @@
                  [:.card {:ref "parsets-card"}
                   [:.card-content
                    [:.row
-                    [:div.right {:style {:max-width "50%"}}
+                    [:div.right {:style {:max-width "65%"}}
                      (let [label-string (->> (get-agg-terms) (map name) (clojure.string/join " "))]
                        (om/build labels/labels cursor
                                  {:opts {:labels (labels/labelize label-string)
                                          :on-label-updated! (partial update-agg-terms-with-label owner)}}))
                      ]
-                    [:span.card-title.black-text "# PARSETS [ " [:strong (->> parsets-agg (map name) (clojure.string/join " > "))] " ]"]
+                    [:span.card-title.black-text [:p "# PARSETS"] [:p "[ " [:strong (->> parsets-agg (map name) (clojure.string/join " > "))] " ]"]]
                     [:p
                      [:input {:type "checkbox" :class "filled-in" :checked show-dimensions
                               :id "toggle-show-dimensions" :ref "toggle-show-dimensions"

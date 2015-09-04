@@ -17,25 +17,16 @@
     {:order {sort-field "desc"}}
     {}))
 
-(defn- build-parsets-agg
-  [terms sub-aggs]
+(defn- build-parsets-agg [{:keys [terms sub-aggs size] :or {size 5}}]
   (reduce (fn [agg-query a-term]
             {:aggs (merge
                     {(keyword a-term)
                      (merge {:terms
-                             (merge {:field a-term :size 5}
+                             (merge {:field a-term :size size}
                                     (sort-sub sub-aggs))}
                             agg-query)}
                     sub-aggs)})
           (build-sub-aggs sub-aggs) terms))
-
-(defn- build-terms-agg [prefix terms sub-aggs]
-  (let [terms-aggs (for [term terms]
-                     {(str prefix (name term)) (merge {:terms (merge {:field (name term) :size 5}
-                                                                     (sort-sub sub-aggs))}
-                                                      (build-sub-aggs sub-aggs))})
-        terms-aggs (reduce merge terms-aggs)]
-    terms-aggs))
 
 (defn- walk-buckets [de-buck bucket prefix steps value-path]
   (map #(de-buck % de-buck prefix (first steps) (rest steps) value-path)
@@ -51,33 +42,23 @@
   (vec (flatten (walk-buckets <-buckets agg-result {} steps value-path))))
 
 (defn- ->query
-  [{:keys [agg-terms sub-aggs agg-prefix-terms show-dimensions? filters default-filter]}]
-  (let [agg-query (build-parsets-agg (reverse agg-terms) sub-aggs)
-        agg-query (if (show-dimensions?)
-                    {:aggs (merge (:aggs agg-query)
-                                  (build-terms-agg agg-prefix-terms agg-terms sub-aggs))}
-                    agg-query)
+  [{:keys [agg-terms sub-aggs show-dimensions? filters default-filter size] :or {size 5}}]
+  (let [agg-query (build-parsets-agg {:terms (reverse agg-terms) :sub-aggs sub-aggs :size size})
         agg-query (filtered-agg (merge {:body agg-query}
                                  (merge {:filter default-filter}
                                         (:combined-query filters))))]
     agg-query))
-
-(defn- update-terms-aggs [owner terms-aggs]
-  (om/update-state! owner :parsets-cursor #(assoc-in % [:terms-aggs :aggregations] terms-aggs)))
 
 (defn- reset-highlighted [owner]
   (-> js/d3 (.select (om/get-node owner "parsets-dims")) (.selectAll ".mg-bar") (.classed "highlight" false)))
 
 (defn- do-parsets-agg
   [owner]
-  (let [{:keys [continue? comm url agg-prefix-terms get-agg-terms make-agg-query value-path]} (om/get-state owner)
+  (let [{:keys [continue? comm url get-agg-terms make-agg-query value-path]} (om/get-state owner)
         {es-settings :es-settings} (om/get-shared owner)]
     (when continue?
       (go (.log js/console "# running parsets aggregation:" (pr-str (get-agg-terms)))
           (let [{agg-result :aggregations} (<! (es-agg (or url (:url-agg (es-settings))) (make-agg-query)))]
-            (let [term-keys (->> (get-agg-terms) (map #(->> % name (str agg-prefix-terms) keyword)))
-                  terms-aggs (-> agg-result (select-keys term-keys))]
-              (update-terms-aggs owner terms-aggs))
             (let [parsets-data (agg->parsets agg-result (get-agg-terms) value-path)]
               (reset-highlighted owner)
               (om/update-state! owner #(assoc % :parsets-data parsets-data))
@@ -106,9 +87,6 @@
       (.dimensions (clj->js (map name (get-parsets-agg))))
       (.value (fn [d i] (. d -value)))))
 
-(defn- dim-accessor [sub-agg]
-  (or sub-agg :doc_count))
-
 (defn highlight [data facets]
   (filter #(every? (fn [[k sel]] (or (empty? sel) (contains? sel (k %)))) facets) data))
 
@@ -121,17 +99,19 @@
     (om/update-state! owner #(assoc % :highlighted sel-facets))
     (put! (:comm (om/get-state owner)) (highlight parsets-data sel-facets))))
 
-(defn- build-bar [cursor owner agg-prefix-terms term-name sub-agg]
+(defn- build-bar [owner term-name]
   (let [chart-id (str (clojure.string/replace term-name #"\." "-") "_bar")
         chart-sel (str "#" chart-id)]
     (om/build mg/mg-bar
-              cursor
+              (om/get-render-state owner :parsets-data)
               {:opts {:id chart-id :title term-name :height 150
-                      :x (-> (dim-accessor sub-agg) name) :y "key"
+                      :x "value" :y "key"
                       :trans-fn (fn [data-cursor]
-                                  (-> data-cursor
-                                      (get-agg-buckets [:terms-aggs :aggregations (keyword (str agg-prefix-terms term-name)) :buckets])
-                                      (flatten-agg-buckets [:key (dim-accessor sub-agg)])))
+                                  (let [reduced-data (->> data-cursor
+                                                          (group-by (keyword term-name))
+                                                          (mapv (fn [g] {:key (first g) :value (->> g last (map :value) (reduce +))}))
+                                                          (sort-by :value >))]
+                                    reduced-data))
                       :on-click-cb (fn [d i]
                                      (let [the-bar (-> js/d3 (.select chart-sel) (.selectAll ".mg-bar") js->clj (get-in [0 i]))
                                            was-highlighted? (-> js/d3 (.select the-bar) (.classed "highlight"))
@@ -141,17 +121,16 @@
 
 (defcomponent parsets [cursor owner {:keys [agg value-path url height] :or {height 600 value-path ["doc_count"]} :as opts}]
   (init-state [_]
-              (let [{:keys [es-settings ref-state]} (om/get-shared owner)
-                    prefix-terms "terms_"]
+              (let [{:keys [es-settings ref-state]} (om/get-shared owner)]
                 {:continue? true
                  :comm (chan)
                  :url url
-                 :agg-prefix-terms prefix-terms
                  :parsets-agg (->> agg :terms (map keyword))
                  :get-agg-terms #(:parsets-agg (om/get-state owner))
-                 :make-agg-query #(->query {:agg-prefix-terms prefix-terms
-                                            :agg-terms ((:get-agg-terms (om/get-state owner)))
+                 :size (get-in opts [:dimensions :size])
+                 :make-agg-query #(->query {:agg-terms ((:get-agg-terms (om/get-state owner)))
                                             :sub-aggs (:sub agg)
+                                            :size (:size (om/get-state owner))
                                             :show-dimensions? (:show-dimensions? (om/get-state owner))
                                             :filters (ref-state :filters)
                                             :default-filter (get-in (es-settings) [:default :filter])})
@@ -160,12 +139,11 @@
                  :svg nil
                  :parsets-data []
                  :highlighted {}
-                 :parsets-cursor (om/root-cursor (atom {:div {:width "90%" :height 200}}))
                  :show-dimensions (get-in opts [:dimensions :show])
                  :show-dimensions? #(:show-dimensions (om/get-state owner))}))
   (will-mount [_]
               (do-parsets-agg owner))
-  (render-state [_ {:keys [parsets-agg get-agg-terms agg-prefix-terms parsets-cursor show-dimensions]}]
+  (render-state [_ {:keys [parsets-agg get-agg-terms parsets-data show-dimensions]}]
                 (html
                  [:.card {:ref "parsets-card"}
                   [:.card-content
@@ -189,10 +167,7 @@
                    [:.row
                     [:.col {:class (if show-dimensions "s9" "s12") :id "parsets" :ref "parsets-div"}]
                     [:.col {:class (if show-dimensions "s3" "hide") :ref "parsets-dims"}
-                     (if (:terms-aggs parsets-cursor)
-                       (for [term (get-agg-terms)]
-                         (let [term-name (name term)]
-                           (build-bar parsets-cursor owner agg-prefix-terms term-name (-> (:sub agg) keys first)))))
+                     (when-not (empty? parsets-data) (map #(build-bar owner (name %)) (get-agg-terms)))
                      ]
                     ]]]
                  ))

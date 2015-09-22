@@ -127,7 +127,7 @@
                  :url url
                  :parsets-agg (->> agg :terms (map keyword))
                  :get-agg-terms #(:parsets-agg (om/get-state owner))
-                 :size (get-in opts [:dimensions :size])
+                 :size (or (get-in opts [:dimensions :size]) 5)
                  :make-agg-query #(->query {:agg-terms ((:get-agg-terms (om/get-state owner)))
                                             :sub-aggs (:sub agg)
                                             :size (:size (om/get-state owner))

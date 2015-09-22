@@ -30,7 +30,8 @@
   :plugins [[lein-cljsbuild "1.0.5"]
             [lein-environ "1.0.0"]
             [lein-pprint "1.1.1"]
-            [lein-ancient "0.6.7"]]
+            [lein-ancient "0.6.7"]
+            [lein-doo "0.1.5-SNAPSHOT"]]
 
   :min-lein-version "2.5.0"
 
@@ -39,7 +40,21 @@
                                         :output-dir    "resources/public/js/out"
                                         :source-map    "resources/public/js/out.js.map"
                                         :optimizations :none
-                                        :pretty-print  true}}}}
+                                        :pretty-print  true}}
+                       :browser-test {:source-paths ["src/cljs" "test/cljs"]
+                                      :compiler {:output-to "out/browser_tests.js"
+                                                 :main 'searchbot.doo-test
+                                                 :optimizations :none}}
+                       :node-test {:source-paths ["src/cljs" "test/cljs"]
+                                   :compiler {:output-to "out/node_tests.js"
+                                              :output-dir "out"
+                                              :main 'searchbot.doo-test
+                                              :optimizations :none
+                                              :hashbang false
+                                              :target :nodejs}}
+                       }}
+
+  :doo {:paths {:karma "karma"}}
 
   :profiles {:dev {:source-paths ["env/dev/clj"]
                    :test-paths ["test/clj"]

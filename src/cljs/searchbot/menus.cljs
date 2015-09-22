@@ -119,5 +119,5 @@
              (let [cm (.fromTextArea js/CodeMirror
                                      (.getElementById js/document "widget-detail")
                                      {:lineNumbers true
-                                      :mode: "javascript"})]
+                                      :mode "javascript"})]
                (om/update! app [:menu :cm] cm))))

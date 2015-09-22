@@ -8,28 +8,29 @@
 
   :test-paths ["test/clj"]
 
-  :dependencies [[org.clojure/clojure "1.6.0"]
-                 [org.clojure/clojurescript "0.0-3058" :scope "provided"]
-                 [ring "1.3.2"]
-                 [ring/ring-core "1.3.2"]
-                 [ring/ring-json "0.3.1"]
+  :dependencies [[org.clojure/clojure "1.7.0"]
+                 [org.clojure/clojurescript "1.7.122"]
+                 [ring "1.4.0"]
+                 [ring/ring-core "1.4.0"]
+                 [ring/ring-json "0.4.0"]
                  [ring-json-response "0.2.0"]
-                 [ring/ring-defaults "0.1.4"]
-                 [compojure "1.3.2"]
+                 [ring/ring-defaults "0.1.5"]
+                 [compojure "1.4.0"]
                  [enlive "1.1.6"]
-                 [org.omcljs/om "0.8.8"]
-                 [environ "1.0.0"]
+                 [org.omcljs/om "0.9.0"]
+                 [environ "1.0.1"]
                  [http-kit "2.1.19"]
-                 [prismatic/om-tools "0.3.10"]
-                 [sablono "0.3.4"]
-                 [cljs-http "0.1.30"]
+                 [prismatic/om-tools "0.4.0"]
+                 [sablono "0.3.6"]
+                 [cljs-http "0.1.37"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [clojurewerkz/elastisch "2.1.0"]
-                 [org.clojure/tools.cli "0.3.2"]]
+                 [org.clojure/tools.cli "0.3.3"]]
 
   :plugins [[lein-cljsbuild "1.0.5"]
             [lein-environ "1.0.0"]
-            [lein-pprint "1.1.1"]]
+            [lein-pprint "1.1.1"]
+            [lein-ancient "0.6.7"]]
 
   :min-lein-version "2.5.0"
 
@@ -43,15 +44,16 @@
   :profiles {:dev {:source-paths ["env/dev/clj"]
                    :test-paths ["test/clj"]
 
-                   :dependencies [[figwheel "0.2.5"]
-                                  [figwheel-sidecar "0.2.5"]
-                                  [com.cemerick/piggieback "0.1.5"]
-                                  [weasel "0.6.0"]]
+                   :dependencies [[figwheel "0.4.0"]
+                                  [figwheel-sidecar "0.4.0"]
+                                  [com.cemerick/piggieback "0.2.1"]
+                                  [org.clojure/tools.nrepl "0.2.11"]
+                                  [weasel "0.7.0"]]
 
                    :repl-options {:init-ns searchbot.server
                                   :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
-                   :plugins [[lein-figwheel "0.2.5"]]
+                   :plugins [[lein-figwheel "0.4.0"]]
 
                    :figwheel {:http-server-root "public"
                               :server-port 3449

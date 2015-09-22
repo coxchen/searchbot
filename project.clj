@@ -31,9 +31,11 @@
             [lein-environ "1.0.0"]
             [lein-pprint "1.1.1"]
             [lein-ancient "0.6.7"]
-            [lein-doo "0.1.5-SNAPSHOT"]]
+            [lein-doo "0.1.4"]]
 
   :min-lein-version "2.5.0"
+
+  :clean-targets [:target-path :compile-path "out"]
 
   :cljsbuild {:builds {:app {:source-paths ["src/cljs"]
                              :compiler {:output-to     "resources/public/js/app.js"
@@ -43,12 +45,12 @@
                                         :pretty-print  true}}
                        :browser-test {:source-paths ["src/cljs" "test/cljs"]
                                       :compiler {:output-to "out/browser_tests.js"
-                                                 :main 'searchbot.doo-test
+                                                 :main 'searchbot.doo-runner
                                                  :optimizations :none}}
                        :node-test {:source-paths ["src/cljs" "test/cljs"]
                                    :compiler {:output-to "out/node_tests.js"
                                               :output-dir "out"
-                                              :main 'searchbot.doo-test
+                                              :main 'searchbot.doo-runner
                                               :optimizations :none
                                               :hashbang false
                                               :target :nodejs}}
@@ -92,6 +94,7 @@
                        :omit-source true
                        :aot :all
                        :main searchbot.server
+                       :dependencies [[lein-doo "0.1.4"]]
                        :cljsbuild {:builds {:app
                                             {:source-paths ["env/prod/cljs"]
                                              :compiler

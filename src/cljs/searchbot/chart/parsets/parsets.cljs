@@ -1,4 +1,4 @@
-(ns searchbot.parsets
+(ns searchbot.chart.parsets.parsets
   (:require-macros [cljs.core.async.macros :refer [go go-loop alt!]])
   (:require [om.core :as om :include-macros true]
             [om-tools.core :refer-macros [defcomponent]]

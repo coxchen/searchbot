@@ -42,19 +42,7 @@
                                         :output-dir    "resources/public/js/out"
                                         :source-map    "resources/public/js/out.js.map"
                                         :optimizations :none
-                                        :pretty-print  true}}
-                       :browser-test {:source-paths ["src/cljs" "test/cljs"]
-                                      :compiler {:output-to "out/browser_tests.js"
-                                                 :main 'searchbot.doo-runner
-                                                 :optimizations :none}}
-                       :node-test {:source-paths ["src/cljs" "test/cljs"]
-                                   :compiler {:output-to "out/node_tests.js"
-                                              :output-dir "out"
-                                              :main 'searchbot.doo-runner
-                                              :optimizations :none
-                                              :hashbang false
-                                              :target :nodejs}}
-                       }}
+                                        :pretty-print  true}}}}
 
   :doo {:paths {:karma "karma"}}
 
@@ -86,7 +74,18 @@
                                                           :output-dir    "resources/public/js/test"
                                                           :source-map    "resources/public/js/test.js.map"
                                                           :optimizations :whitespace
-                                                          :pretty-print  false}}}}}
+                                                          :pretty-print  false}}
+                                        :browser-test {:source-paths ["src/cljs" "test/cljs"]
+                                                       :compiler {:output-to "out/browser_tests.js"
+                                                                  :main 'searchbot.doo-runner
+                                                                  :optimizations :none}}
+                                        :node-test {:source-paths ["src/cljs" "test/cljs"]
+                                                    :compiler {:output-to "out/node_tests.js"
+                                                               :output-dir "out"
+                                                               :main 'searchbot.doo-runner
+                                                               :optimizations :none
+                                                               :hashbang false
+                                                               :target :nodejs}}}}}
 
              :uberjar {:source-paths ["env/prod/clj"]
                        :hooks [leiningen.cljsbuild]
@@ -94,7 +93,6 @@
                        :omit-source true
                        :aot :all
                        :main searchbot.server
-                       :dependencies [[lein-doo "0.1.4"]]
                        :cljsbuild {:builds {:app
                                             {:source-paths ["env/prod/cljs"]
                                              :compiler

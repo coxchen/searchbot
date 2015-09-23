@@ -4,7 +4,7 @@
             [om-tools.core :refer-macros [defcomponent]]
             [sablono.core :as html :refer-macros [html]]
             [cljs.core.async :refer [put! <! >! chan timeout close!]]
-            [searchbot.es :refer [es-agg filtered-agg get-agg-buckets flatten-agg-buckets]]
+            [searchbot.es :refer [es-agg filtered-agg]]
             [searchbot.input.labels :as labels]
             [searchbot.charts :refer [es-chart]]
             [searchbot.chart.metricgraphics :as mg]))
@@ -42,7 +42,7 @@
   (vec (flatten (walk-buckets <-buckets agg-result {} steps value-path))))
 
 (defn- ->query
-  [{:keys [agg-terms sub-aggs show-dimensions? filters default-filter size] :or {size 5}}]
+  [{:keys [agg-terms sub-aggs filters default-filter size] :or {size 5}}]
   (let [agg-query (build-parsets-agg {:terms (reverse agg-terms) :sub-aggs sub-aggs :size size})
         agg-query (filtered-agg (merge {:body agg-query}
                                  (merge {:filter default-filter}
@@ -131,7 +131,6 @@
                  :make-agg-query #(->query {:agg-terms ((:get-agg-terms (om/get-state owner)))
                                             :sub-aggs (:sub agg)
                                             :size (:size (om/get-state owner))
-                                            :show-dimensions? (:show-dimensions? (om/get-state owner))
                                             :filters (ref-state :filters)
                                             :default-filter (get-in (es-settings) [:default :filter])})
                  :value-path (apply vector (map keyword value-path))
@@ -139,8 +138,7 @@
                  :svg nil
                  :parsets-data []
                  :highlighted {}
-                 :show-dimensions (get-in opts [:dimensions :show])
-                 :show-dimensions? #(:show-dimensions (om/get-state owner))}))
+                 :show-dimensions (get-in opts [:dimensions :show])}))
   (will-mount [_]
               (do-parsets-agg owner))
   (render-state [_ {:keys [parsets-agg get-agg-terms parsets-data show-dimensions]}]

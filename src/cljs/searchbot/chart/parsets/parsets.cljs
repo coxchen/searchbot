@@ -7,39 +7,8 @@
             [searchbot.es :refer [es-agg filtered-agg]]
             [searchbot.input.labels :as labels]
             [searchbot.charts :refer [es-chart]]
-            [searchbot.chart.metricgraphics :as mg]))
-
-(defn- build-sub-aggs [sub-aggs]
-  (if sub-aggs {:aggs sub-aggs} {}))
-
-(defn- sort-sub [sub-aggs]
-  (if-let [sort-field (-> sub-aggs keys first)]
-    {:order {sort-field "desc"}}
-    {}))
-
-(defn- build-parsets-agg [{:keys [terms sub-aggs size] :or {size 5}}]
-  (reduce (fn [agg-query a-term]
-            {:aggs (merge
-                    {(keyword a-term)
-                     (merge {:terms
-                             (merge {:field a-term :size size}
-                                    (sort-sub sub-aggs))}
-                            agg-query)}
-                    sub-aggs)})
-          (build-sub-aggs sub-aggs) terms))
-
-(defn- walk-buckets [de-buck bucket prefix steps value-path]
-  (map #(de-buck % de-buck prefix (first steps) (rest steps) value-path)
-           (get-in bucket [(first steps) :buckets])))
-
-(defn- <-buckets [bucket de-buck prefix current-step steps value-path]
-  (if (= 0 (count steps))
-    (merge prefix {current-step (:key bucket) :value (get-in bucket value-path)})
-    (let [prefix (merge prefix {current-step (:key bucket)})]
-      (walk-buckets de-buck bucket prefix steps value-path))))
-
-(defn- agg->parsets [agg-result steps value-path]
-  (vec (flatten (walk-buckets <-buckets agg-result {} steps value-path))))
+            [searchbot.chart.metricgraphics :as mg]
+            [searchbot.chart.parsets.agg :refer [build-parsets-agg agg->parsets]]))
 
 (defn- ->query
   [{:keys [agg-terms sub-aggs filters default-filter size] :or {size 5}}]

@@ -119,7 +119,7 @@
                                        (-> js/d3 (.select the-bar) (.classed "highlight" (not was-highlighted?)))
                                        (select! owner (if was-highlighted? disj conj) selected)))}})))
 
-(defcomponent parsets [cursor owner {:keys [agg value-path url height] :or {height 600 value-path ["doc_count"]} :as opts}]
+(defcomponent parsets [cursor owner {:keys [id agg value-path url height] :or {height 600 value-path ["doc_count"]} :as opts}]
   (init-state [_]
               (let [{:keys [es-settings ref-state]} (om/get-shared owner)]
                 {:continue? true
@@ -165,10 +165,10 @@
                      [:label {:for "toggle-show-dimensions"} "Show Dimensional Charts"]]
                     ]
                    [:.row
-                    [:.col {:class (if show-dimensions "s9" "s12") :id "parsets" :ref "parsets-div"}]
-                    [:.col {:class (if show-dimensions "s3" "hide") :ref "parsets-dims"}
-                     (when-not (empty? parsets-data) (map #(build-bar owner (name %)) (get-agg-terms)))
-                     ]
+                    [:.col {:class (if show-dimensions "s9" "s12") :id id :ref "parsets-div"}]
+                    (if show-dimensions
+                      [:.col {:class "s3" :ref "parsets-dims"}
+                       (when-not (empty? parsets-data) (map #(build-bar owner (name %)) (get-agg-terms)))])
                     ]]]
                  ))
   (did-update [_ _ _]
@@ -184,14 +184,14 @@
              (let [{:keys [comm parsets-agg]} (om/get-state owner)
                    parsets-div (om/get-node owner "parsets-div")
                    card-width #(* 0.95 (.-offsetWidth parsets-div))
-                   get-svg #(new-svg {:id "#parsets" :height height :width (card-width) :width-fn card-width})
+                   get-svg #(new-svg {:id (str "#" id) :height height :width (card-width) :width-fn card-width})
                    chart #(make-parsets-chart
                            {:height height :width (card-width) :width-fn card-width
                             :get-parsets-agg (fn [_] (:parsets-agg (om/get-state owner)))})]
                (.attach js/Waves (om/get-node owner "parsets-div") "waves-yellow")
                (go (while (:continue? (om/get-state owner))
                      (let [parsets-data (<! comm)
-                           _ (-> js/d3 (.select "#parsets > svg") .remove)
+                           _ (-> js/d3 (.select (str "#" id " > svg")) .remove)
                            svg (get-svg)]
                        (when (< 0 (count parsets-data))
                          (.log js/console "# parsets aggregation:" (count parsets-data))

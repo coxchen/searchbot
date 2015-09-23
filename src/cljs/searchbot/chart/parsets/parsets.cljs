@@ -8,7 +8,8 @@
             [searchbot.input.labels :as labels]
             [searchbot.charts :refer [es-chart]]
             [searchbot.chart.metricgraphics :as mg]
-            [searchbot.chart.parsets.agg :refer [build-parsets-agg agg->parsets]]))
+            [searchbot.chart.parsets.agg :refer [build-parsets-agg agg->parsets]]
+            [searchbot.chart.parsets.chart :as chart]))
 
 (defn- ->query
   [{:keys [agg-terms sub-aggs filters default-filter size] :or {size 5}}]
@@ -43,18 +44,6 @@
     (om/update-state! owner #(assoc % :parsets-agg agg-terms))
     (do-parsets-agg owner)
     ))
-
-(defn- new-svg [{:keys [id height width-fn]}]
-  (-> js/d3 (.select id) (.append "svg") (.attr "width" (width-fn)) (.attr "height" height)))
-
-(defn- make-parsets-chart [{:keys [height width-fn get-parsets-agg]}]
-  (-> js/d3
-      .parsets
-      (.tension 0.8)
-      (.width (width-fn))
-      (.height height)
-      (.dimensions (clj->js (map name (get-parsets-agg))))
-      (.value (fn [d i] (. d -value)))))
 
 (defn highlight [data facets]
   (filter #(every? (fn [[k sel]] (or (empty? sel) (contains? sel (k %)))) facets) data))
@@ -151,10 +140,10 @@
              (let [{:keys [comm parsets-agg]} (om/get-state owner)
                    parsets-div (om/get-node owner "parsets-div")
                    card-width #(* 0.95 (.-offsetWidth parsets-div))
-                   get-svg #(new-svg {:id (str "#" id) :height height :width (card-width) :width-fn card-width})
-                   chart #(make-parsets-chart
-                           {:height height :width (card-width) :width-fn card-width
-                            :get-parsets-agg (fn [_] (:parsets-agg (om/get-state owner)))})]
+                   get-svg #(chart/d3->svg {:id (str "#" id) :height height :width (card-width) :width-fn card-width})
+                   parsets-chart #(chart/d3->parsets
+                                   {:height height :width-fn card-width
+                                    :dims (:parsets-agg (om/get-state owner))})]
                (.attach js/Waves (om/get-node owner "parsets-div") "waves-yellow")
                (go (while (:continue? (om/get-state owner))
                      (let [parsets-data (<! comm)
@@ -163,7 +152,7 @@
                        (when (< 0 (count parsets-data))
                          (.log js/console "# parsets aggregation:" (count parsets-data))
                          (-> svg (.datum (clj->js parsets-data))
-                             (.call (chart)))
+                             (.call (parsets-chart)))
                          (.ripple js/Waves (om/get-node owner "parsets-div"))))))
                (if-let [filters ((:ref-state (om/get-shared owner)) :filters)]
                  (let [combined-query (:combined-query filters)]

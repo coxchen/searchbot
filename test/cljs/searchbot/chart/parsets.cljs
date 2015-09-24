@@ -45,18 +45,18 @@
                                                                 {:key "304" :doc_count 21}]}}]}}]}}})
 
 (def sample-parsets-data
-  [{:request "/favicon.ico", :verb "get", :response "200", :value 2201}
-   {:request "/favicon.ico", :verb "get", :response "304", :value 13}
-   {:request "/favicon.ico", :verb "get", :response "206", :value 9}
-   {:request "/favicon.ico", :verb "head", :response "200", :value 222}
-   {:request "/hackday08/randomtags.py", :verb "post", :response "200", :value 1934}
-   {:request "/hackday08/randomtags.py", :verb "post", :response "500", :value 1}
-   {:request "/reset.css", :verb "get", :response "200", :value 1458}
-   {:request "/reset.css", :verb "get", :response "304", :value 52}
-   {:request "/style2.css", :verb "get", :response "200", :value 1449}
-   {:request "/style2.css", :verb "get", :response "304", :value 48}
-   {:request "/images/jordan-80.png", :verb "get", :response "200", :value 1392}
-   {:request "/images/jordan-80.png", :verb "get", :response "304", :value 21}])
+  [{:request "/favicon.ico" :verb "get" :response "200" :value 2201}
+   {:request "/favicon.ico" :verb "get" :response "304" :value 13}
+   {:request "/favicon.ico" :verb "get" :response "206" :value 9}
+   {:request "/favicon.ico" :verb "head" :response "200" :value 222}
+   {:request "/hackday08/randomtags.py" :verb "post" :response "200" :value 1934}
+   {:request "/hackday08/randomtags.py" :verb "post" :response "500" :value 1}
+   {:request "/reset.css" :verb "get" :response "200" :value 1458}
+   {:request "/reset.css" :verb "get" :response "304" :value 52}
+   {:request "/style2.css" :verb "get" :response "200" :value 1449}
+   {:request "/style2.css" :verb "get" :response "304" :value 48}
+   {:request "/images/jordan-80.png" :verb "get" :response "200" :value 1392}
+   {:request "/images/jordan-80.png" :verb "get" :response "304" :value 21}])
 
 (def sample-es-agg-resp-with-sub
   {:took 19 :timed_out false :_shards {:total 3 :successful 3 :failed 0}
@@ -108,15 +108,15 @@
     :sum_bytes {:value 3.541888535E9}}})
 
 (def sample-parsets-data-with-sub
-  [{:request "/files/logstash/logstash-1.0.17-monolithic.jar", :verb "get", :response "200", :value 3114356684}
-   {:request "/files/logstash/logstash-1.0.17-monolithic.jar", :verb "get", :response "206", :value 35668889}
-   {:request "/files/logstash/logstash-1.0.17-monolithic.jar", :verb "get", :response "304", :value 193}
-   {:request "/files/logstash/logstash-1.0.17-monolithic.jar", :verb "head", :response "200", :value 634}
-   {:request "/images/web/2009/banner.png", :verb "get", :response "200", :value 72668621}
-   {:request "/images/web/2009/banner.png", :verb "get", :response "304", :value 2987}
-   {:request "/files/logstash/logstash-1.0.12-monolithic.jar", :verb "get", :response "200", :value 37853629}
-   {:request "/files/logstash/logstash-1.0.14-monolithic.jar", :verb "get", :response "200", :value 34408788}
-   {:request "/files/logstash/logstash-1.0.6-monolithic.jar", :verb "get", :response "200", :value 33826430}])
+  [{:request "/files/logstash/logstash-1.0.17-monolithic.jar" :verb "get" :response "200" :value 3114356684}
+   {:request "/files/logstash/logstash-1.0.17-monolithic.jar" :verb "get" :response "206" :value 35668889}
+   {:request "/files/logstash/logstash-1.0.17-monolithic.jar" :verb "get" :response "304" :value 193}
+   {:request "/files/logstash/logstash-1.0.17-monolithic.jar" :verb "head" :response "200" :value 634}
+   {:request "/images/web/2009/banner.png" :verb "get" :response "200" :value 72668621}
+   {:request "/images/web/2009/banner.png" :verb "get" :response "304" :value 2987}
+   {:request "/files/logstash/logstash-1.0.12-monolithic.jar" :verb "get" :response "200" :value 37853629}
+   {:request "/files/logstash/logstash-1.0.14-monolithic.jar" :verb "get" :response "200" :value 34408788}
+   {:request "/files/logstash/logstash-1.0.6-monolithic.jar" :verb "get" :response "200" :value 33826430}])
 
 (deftest handle-agg-resp-test
   (is (= sample-parsets-data

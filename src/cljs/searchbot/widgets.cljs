@@ -8,7 +8,7 @@
             [searchbot.meta :refer [widget-wrapper detail]]
             [searchbot.charts :refer [es-chart]]
             [searchbot.search :refer [searchbox]]
-            [searchbot.parsets :refer [parsets]]
+            [searchbot.chart.parsets.core :refer [parsets]]
             [searchbot.filters :refer [filters]]
             ))
 

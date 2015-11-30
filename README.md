@@ -8,6 +8,8 @@ When you go beyond data exploration or start to development product features aro
 ## Concept
 A data-driven prototyping engine for dashboards based on ElasticSearch
 
+![dds](doc/data-driven-system.png)
+
 ![app](doc/app.png)
 
 ## Dashboard Definition

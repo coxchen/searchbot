@@ -10,6 +10,7 @@
 
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.122"]
+                 [devcards "0.2.1"]
                  [ring "1.4.0"]
                  [ring/ring-core "1.4.0"]
                  [ring/ring-json "0.4.0"]
@@ -37,12 +38,25 @@
 
   :clean-targets [:target-path :compile-path "out"]
 
-  :cljsbuild {:builds {:app {:source-paths ["src/cljs"]
-                             :compiler {:output-to     "resources/public/js/app.js"
-                                        :output-dir    "resources/public/js/out"
-                                        :source-map    "resources/public/js/out.js.map"
-                                        :optimizations :none
-                                        :pretty-print  true}}}}
+  :cljsbuild
+  {:builds
+   {:app {:source-paths ["src/cljs"]
+          :compiler {:output-to     "resources/public/js/app.js"
+                     :output-dir    "resources/public/js/out"
+                     :source-map    "resources/public/js/out.js.map"
+                     :optimizations :none
+                     :pretty-print  true}}
+    :devcards {:source-paths ["src/cljs"]
+               :figwheel { :devcards true }
+               :compiler { :main    "searchbot.devcards"
+                           :asset-path "js/devcards_out"
+                           :source-map "resources/public/js/devcards_out/showdown.js.map"
+                           :output-to  "resources/public/js/searchbot_devcards.js"
+                           :output-dir "resources/public/js/devcards_out"
+                           :source-map-timestamp true
+                           :optimizations :none
+                           :pretty-print  true }}
+    }}
 
   :doo {:paths {:karma "karma"}}
 
@@ -77,12 +91,12 @@
                                                           :pretty-print  false}}
                                         :browser-test {:source-paths ["src/cljs" "test/cljs"]
                                                        :compiler {:output-to "out/browser_tests.js"
-                                                                  :main 'searchbot.doo-runner
+                                                                  :main "searchbot.doo-runner"
                                                                   :optimizations :none}}
                                         :node-test {:source-paths ["src/cljs" "test/cljs"]
                                                     :compiler {:output-to "out/node_tests.js"
                                                                :output-dir "out"
-                                                               :main 'searchbot.doo-runner
+                                                               :main "searchbot.doo-runner"
                                                                :optimizations :none
                                                                :hashbang false
                                                                :target :nodejs}}}}}

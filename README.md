@@ -1,6 +1,14 @@
 # searchbot
 
+## A little bit of background
+Hi, there. I hope enjoy working with [ElasticSearch](https://www.elastic.co/products/elasticsearch) as I do. ElasticSearch is a wonderful tool for most data analysis and aggregations problems. On top of ElasticSearch, [Kibana](https://www.elastic.co/products/kibana) helps to explore data indexed in ElasticSearch, with handy widgets and settings for time-based data.
+
+When you go beyond data exploration or start to development product features around ElasticSearch, you may find Kibana falls short of providing more advanced queries and aggregations. That's time to build customized UI widgets for your own dashboard, and it's also what motivates me to build **searchbot**.
+
+## Concept
 A data-driven prototyping engine for dashboards based on ElasticSearch
+
+![dds](doc/data-driven-system.png)
 
 ![app](doc/app.png)
 

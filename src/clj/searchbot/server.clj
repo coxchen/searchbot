@@ -14,8 +14,16 @@
             [ring.util.json-response :as jresp]
             [environ.core :refer [env]]
             [org.httpkit.server :refer [run-server]]
+            [cheshire.core :as json]
             [searchbot.es :as es])
   (:gen-class))
+
+(extend-protocol cheshire.generate/JSONable
+  org.elasticsearch.common.joda.time.DateTime
+  (to-json [t jg]
+           (cheshire.generate/write-string jg (str t))))
+
+(defn es-mode [mode] (dosync (ref-set es/ES_MODE mode)))
 
 (defn- has-file?
   [filename]
@@ -30,13 +38,12 @@
     (edn/read-string edn-content)))
 
 (def ^:private server-default
-  (atom {:es {:host "localhost" :port 9200}
+  (atom {:es {:host "localhost" :port 9200 :cluster "elasticsearch"}
          :nav [{:view "app-state" :label "Default" :active true}]}))
 
 (defn- load-server-edn [] (read-edn "server" :default @server-default))
 
-(defn get-es-host []
-  (str "http://" (get-in (load-server-edn) [:es :host]) ":" (get-in (load-server-edn) [:es :port])))
+(defn get-es-host [] (load-server-edn))
 
 (deftemplate init-page (io/resource "index.html") []
   [:body] (if is-dev? inject-devmode-html identity))
@@ -132,13 +139,17 @@
   [["-p" "--port PORT" "Port used for SearchBot API server."
     :id :port
     :default 10555
-    :parse-fn #(Integer/parseInt %)]])
+    :parse-fn #(Integer/parseInt %)]
+   ["-n" nil "Running with NATIVE mode"
+    :id :native :default false
+    :assoc-fn (fn [m k _] (update-in m [k] not))]])
 
 (defn -main [& args]
   (let [{:keys [options arguments summary]} (parse-opts args cli-opts)
-        {:keys [port]} options
+        {:keys [port native]} options
         cmd (first arguments)
         args (next arguments)]
+    (when native (es-mode :NATIVE))
     (case cmd
       "run" (do (version) (run :port port))
       "version" (version)

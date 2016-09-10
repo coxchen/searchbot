@@ -110,7 +110,7 @@
                                  {:opts {:labels (labels/labelize label-string)
                                          :on-label-updated! (partial update-agg-terms-with-label owner)}}))
                      ]
-                    [:span.card-title.black-text [:p "# PARSETS"] [:p "[ " [:strong (->> parsets-agg (map name) (clojure.string/join " > "))] " ]"]]
+                    [:span.card-title.black-text [:p "# PARSETS -> " url] [:p "[ " [:strong (->> parsets-agg (map name) (clojure.string/join " > "))] " ]"]]
                     [:p
                      [:input {:type "checkbox" :class "filled-in" :checked show-dimensions
                               :id "toggle-show-dimensions" :ref "toggle-show-dimensions"

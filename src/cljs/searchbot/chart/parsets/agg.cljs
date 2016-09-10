@@ -13,8 +13,8 @@
 
 (defn build-parsets-agg [{:keys [terms sub-aggs size] :or {size 5}}]
   (reduce (fn [agg-query a-term]
-            {:aggs (merge
-                    {(keyword a-term)
+            {:aggregations
+             (merge {(keyword a-term)
                      (merge {:terms
                              (merge {:field a-term :size size}
                                     (sort-sub sub-aggs))}

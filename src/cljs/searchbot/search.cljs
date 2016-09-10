@@ -63,7 +63,7 @@
                                                        13 (go ;; ENTER
                                                            (let [resp (<! (es-query
                                                                            (join-str "es" (:es-index opts) (:es-type opts) "_search")
-                                                                           query))]
+                                                                           (assoc query :sort {:_timestamp {:order "desc"}})))]
                                                              (update-query-result owner resp)))
                                                        nil)))}]
                            [:label {:for (:id opts)} "query string"]]
